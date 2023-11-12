@@ -1,0 +1,30 @@
+runtime: python312
+
+instance_class: B1
+
+manual_scaling:
+  instances: 1
+
+#entrypoint: python me/__main__.py run
+#entrypoint: uvicorn me.me_api:app --port 8080
+
+entrypoint: uvicorn me.me_api:app
+
+#entrypoint: gunicorn me.me_api:app
+#entrypoint: gunicorn -w 1 -k uvicorn.workers.UvicornWorker me.me_api:app
+
+includes:
+  - env_variables.yaml
+
+#env_variables:
+#  BUCKET_NAME: "example-gcs-bucket"
+
+handlers:
+## Matches requests to /images/... to files in static/images/...
+#- url: /images
+#  static_dir: static/images
+#
+- url: /.*
+  secure: always
+  redirect_http_response_code: 301
+  script: auto
