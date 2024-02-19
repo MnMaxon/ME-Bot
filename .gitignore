@@ -160,4 +160,4 @@ cython_debug/
 #.idea/
 
 #/app.yaml
-/env_variables.yaml
+/env_variables*

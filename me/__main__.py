@@ -1,6 +1,9 @@
 import asyncio
+import os
+
 import click
 import uvicorn
+import yaml
 
 @click.group(chain=True, invoke_without_command=True, no_args_is_help=True)
 @click.version_option(package_name='me')
@@ -21,21 +24,25 @@ async def test_message(client):
 
 
 @main.command()
-@click.option('--token', '-t', required=False)
-@click.option('--guilds', '-g', required=False)
-def run(token, guilds):
-    print('Starting server')
-    print("WARNING COMMAND ARGS NOT WORKING -- MUST USE TOKEN")
-    # me_api.client.sync_guilds = guilds
-    # me_api.client.token = token
-    uvicorn.run("me.me_api:app", host="127.0.0.1", port=1111, reload=True)
-    # me_api.client.loop.create_task(uvicorn.run(me_api.app, host="127.0.0.1", port=8080))
-    # asyncio.run(me_api.client.start(token))
+# @click.option('--token', '-t', required=False)
+# @click.option('--guilds', '-g', required=False)
+@click.option('--app', '-a', required=False, default="me.me_api:app")
+@click.option('--host', '-a', required=False, default="127.0.0.1")
+@click.option('--port', '-a', required=False, default=8081, type=int)
+@click.option('--reload', '-r', required=False, default=True, type=bool)
+@click.option('--env-vars-path', '-e', required=False, type=click.Path(exists=True),
+              help='env_variables yaml, imports environment variables -- not secure for secret information')
+def run(app, host, port, reload, env_vars_path=None):
+    if env_vars_path is not None:
+        print(f"Loading env vars from {env_vars_path}")
+        with open(env_vars_path, "r") as f:
+            env = yaml.safe_load(f).get('env_variables', {})
+            if len(env) == 0:
+                print(f"WARNING: Could not find env_variables in {env_vars_path}, not overriding environment variables")
+            os.environ.update(env)
 
-    # server = uvicorn.Server(config)
-    # server.run()
-    # api = me_api.MEApi()
-    # asyncio.run(api.run_bot(token, guilds))
+    print(f'Starting server {app} with uvicorn on {host} - port {port} - reload={reload}')
+    uvicorn.run(app, host=host, port=port, reload=reload)
 
 # async def start_server_and_bot(token):
 #     async with asyncio.TaskGroup() as tg:

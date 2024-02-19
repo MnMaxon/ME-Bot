@@ -11,13 +11,16 @@ Installation
 
 Run
 * Run the main.py for command help
-* To start app, run: python main.py run --token {bot_token}
-* Arguments can be replaced with environment variables
-  * Format: ME_{COMMAND_NAME}_{ARGUMENT_NAME}
-  * Example: ME_RUN_TOKEN
-* Optional --guilds argument - Use like --guilds {guild1},{guild2},{...}
-  * This will update the commands immediately for those guilds - According to the internet, it can take an hour to sync normally
-  * Env Variable: ME_RUN_GUILDS
+* To start app, run: python main.py run
+* Required Env Variables:
+  * ME_RUN_TOKEN: Discord Client Token
+  * ME_BOT_ID: Discord Bot ID
+  * OAUTH_URL
+  * OAUTH_SECRET
+  * OAUTH_REDIRECT_URI
+* Optional Env Variables:
+  * ME_RUN_GUILDS ={guild1},{guild2},{...}
+    * For Dev - Updates the commands immediately for these guilds - Can take ~1 hour to sync to all servers normally
 
 # Technical Information
 Stores data in csv files in /data

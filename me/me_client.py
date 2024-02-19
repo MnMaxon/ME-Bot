@@ -1,11 +1,12 @@
-from typing import Optional
+import os
+from typing import Optional, List
 
 import discord
 from discord import app_commands
 
 
 class MEClient(discord.Client):
-    sync_guilds = None
+    _sync_guilds: str | None = None
 
     def __init__(self, *, intents: discord.Intents):
         super().__init__(intents=intents)
@@ -22,19 +23,33 @@ class MEClient(discord.Client):
     # In this basic example, we just synchronize the app commands to one guild.
     # Instead of specifying a guild to every command, we copy over our global commands instead.
     # By doing so, we don't have to wait up to an hour until they are shown to the end-user.
-    async def setup_hook(self):
-        print(f"Setting up command hook for guilds specified in the guilds argument: {self.sync_guilds}")
+    async def setup_hook(self, guilds: List[int] or None = None):
+        if guilds is None:
+            guilds = self.get_sync_guilds()
+        print(f"Setting up command hook for guilds specified in the guilds argument: {guilds}")
         # This copies the global commands over to your guild.
-        if self.sync_guilds is not None:
-            for guild_id in self.sync_guilds:
-                guild = await self.fetch_guild(guild_id)
-                await self.sync_commands(guild)
+        for guild_id in guilds:
+            guild = await self.fetch_guild(guild_id)
+            await self.sync_commands(guild)
 
     async def sync_commands(self, guild: discord.Guild, log=True):
         self.tree.copy_global_to(guild=guild)
         await self.tree.sync(guild=guild)
         if log:
             print(f"Synced commands with {guild} ({guild.id})")
+
+    # Returns a list of guilds that sync immediately on startup
+    def get_sync_guilds(self) -> List[int]:
+        if isinstance(self._sync_guilds, list):
+            return self._sync_guilds
+        if self._sync_guilds is not None:
+            guilds = self._sync_guilds
+        else:
+            guilds = os.environ.get('ME_RUN_GUILDS', '')
+        guilds = guilds.replace(";", ",").replace(" ", ",").split(",")
+        guilds = [g.strip() for g in guilds]
+        guilds = [int(g) for g in guilds if g != ""]
+        return guilds
 
 
 intents = discord.Intents.default()
@@ -99,7 +114,6 @@ async def on_test_event(**kwargs):
     # Use like client.dispatch("test_event")   <- With optional other args
     print(f"Called test event with: {kwargs}")
 
-
 # These Context menu commands look cool
 
 # A Context Menu command is an app command that can be run on a member or on a message by
@@ -135,4 +149,3 @@ async def on_test_event(**kwargs):
 #     url_view.add_item(discord.ui.Button(label='Go to Message', style=discord.ButtonStyle.url, url=message.jump_url))
 #
 #     await log_channel.send(embed=embed, view=url_view)
-
