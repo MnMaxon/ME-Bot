@@ -74,7 +74,7 @@ def get_oauth_info(token_dict):
     headers = {
         # 'Content-Type': 'application/x-www-form-urlencoded',
         # "Content-Type": "application/json",
-        "Authorization": f'{token_dict['token_type']} {token_dict['access_token']}'
+        "Authorization": f"{token_dict['token_type']} {token_dict['access_token']}"
         # "authorization": f'{token_dict['token_type']} ',
     }
     r = requests.get('%s/oauth2/@me' % API_ENDPOINT, headers=headers) #TODO THIS FOR BOTS WRONG!
@@ -157,7 +157,7 @@ def callback(code=None):
     session.auth = (CLIENT_ID, CLIENT_SECRET)
     # bot_token = get_bot_token_dict(session=session)
     token_dict = exchange_code(session, code=code)
-    session.headers.update({'Authorization': f'Bearer {token_dict['access_token']}'})
+    session.headers.update({'Authorization': f"Bearer {token_dict['access_token']}"})
     user_auth = get_oauth_info(token_dict)
     print('User Oauth',user_auth)  # TODO Why can't I do anything with token?
 
