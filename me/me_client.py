@@ -1,9 +1,11 @@
+import logging
 import os
 from typing import Optional, List
 
 import discord
 from discord import app_commands
 
+_logger = logging.getLogger(__name__)
 
 class MEClient(discord.Client):
     _sync_guilds: str | None = None
@@ -18,7 +20,7 @@ class MEClient(discord.Client):
         # Note: When using commands.Bot instead of discord.Client, the bot will
         # maintain its own tree instead.
         self.tree = app_commands.CommandTree(self)
-        print(self.tree)
+        _logger.info(self.tree)
 
     # In this basic example, we just synchronize the app commands to one guild.
     # Instead of specifying a guild to every command, we copy over our global commands instead.
@@ -26,7 +28,7 @@ class MEClient(discord.Client):
     async def setup_hook(self, guilds: List[int] or None = None):
         if guilds is None:
             guilds = self.get_sync_guilds()
-        print(f"Setting up command hook for guilds specified in the guilds argument: {guilds}")
+        _logger.info(f"Setting up command hook for guilds specified in the guilds argument: {guilds}")
         # This copies the global commands over to your guild.
         for guild_id in guilds:
             guild = await self.fetch_guild(guild_id)
@@ -36,7 +38,7 @@ class MEClient(discord.Client):
         self.tree.copy_global_to(guild=guild)
         await self.tree.sync(guild=guild)
         if log:
-            print(f"Synced commands with {guild} ({guild.id})")
+            _logger.info(f"Synced commands with {guild} ({guild.id})")
 
     # Returns a list of guilds that sync immediately on startup
     def get_sync_guilds(self) -> List[int]:
@@ -58,8 +60,8 @@ client = MEClient(intents=intents)
 
 @client.event
 async def on_ready():
-    print(f'Logged in as {client.user} (ID: {client.user.id})')
-    print('------')
+    _logger.info(f'Logged in as {client.user} (ID: {client.user.id})')
+    _logger.info('------')
 
 
 @client.tree.command()
@@ -112,7 +114,7 @@ async def joined(interaction: discord.Interaction, member: Optional[discord.Memb
 @client.event
 async def on_test_event(**kwargs):
     # Use like client.dispatch("test_event")   <- With optional other args
-    print(f"Called test event with: {kwargs}")
+    _logger.info(f"Called test event with: {kwargs}")
 
 # These Context menu commands look cool
 
