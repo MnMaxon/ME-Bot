@@ -7,7 +7,9 @@ from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import RedirectResponse
 
-from me import me_config, session_info
+from me import session_info
+from me.io import config
+from me.io.db_util import SQLiteDB
 from me.me_client import client
 from me.requestor import DiscordRequestor
 
@@ -19,14 +21,20 @@ _logger = logging.getLogger(__name__)
 class MEFastAPI(FastAPI):
     user_sessions = {}
 
-    def __init__(self: FastAPI, config=None, discord_requestor: DiscordRequestor = None, **kwargs):
-        if config is None:
-            config = me_config.get_config()
-        self.config: me_config.Config = config
+    def __init__(self: FastAPI, cfg=None, discord_requestor: DiscordRequestor = None, **kwargs):
+        if cfg is None:
+            cfg = config.get_config()
+        self.config: config.Config = cfg
+
+        _logger.info("Setting up database...")
+        db = SQLiteDB()
+        self.db = db
+        db.setup()
+
         if discord_requestor is None:
             discord_requestor = DiscordRequestor(
-                config.me_bot_id, config.oauth_secret, config.oauth_redirect_uri,
-                api_endpoint=config.discord_api_endpoint,
+                cfg.me_bot_id, cfg.oauth_secret, cfg.oauth_redirect_uri,
+                api_endpoint=cfg.discord_api_endpoint,
             )
         self.discord_requestor = discord_requestor
         super().__init__(**kwargs)
