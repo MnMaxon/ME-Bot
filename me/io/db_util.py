@@ -78,9 +78,11 @@ class SQLiteDB:
                                    [(message_id, first_message_id, channel_id) for message_id in message_ids])
 
     def delete_messages(self, first_message_id: int):
+        first_message_id = int(first_message_id)
         with self.connect() as conn:
             conn.execute(PRAGMA)
-            first_message_id = int(first_message_id)
+            print(self.read_sql("SELECT * FROM messages WHERE first_message_id=?", (first_message_id,)))
+            print(f"SELECT * FROM messages WHERE first_message_id={first_message_id}")
             with closing(conn.cursor()) as cursor:
                 cursor.execute("DELETE FROM messages WHERE first_message_id = ?", (first_message_id,))
                 cursor.execute("DELETE FROM message_groups WHERE first_message_id = ?", (first_message_id,))
@@ -133,3 +135,13 @@ class SQLiteDB:
         df = pd.read_sql(sql, self.connect(), params=(server_id, user_id, permission))
         df["permission_value"] = df["permission_value"].astype(bool)
         return df
+
+    def get_messages_of_type_df_and_server(self, type_id, server_id):
+        server_id = int(server_id)
+        sql = f"{SELECT_MESSAGES_AND_GROUPS} WHERE g.type_id = ? AND g.server_id = ?"
+        return self.read_sql(sql, params=(type_id, server_id))
+
+    def get_messages_of_type_df_and_channel(self, type_id, channel_id):
+        channel_id = int(channel_id)
+        sql = f"{SELECT_MESSAGES_AND_GROUPS} WHERE g.type_id = ? AND g.channel_id = ?"
+        return self.read_sql(sql, params=(type_id, channel_id))

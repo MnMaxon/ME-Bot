@@ -30,7 +30,7 @@ class DropdownMessage(me_message.MEMessage):
         return MessageDropdownView()
 
 
-role_group = me_message.MEMessageGroup(me_message.MessageType.ROLE_MESSAGE, [RoleMessage()])
+role_group = me_message.MEMessageGroup(me_message.MessageType.ROLE_MESSAGE, [RoleMessage()], max_messages_per_channel=1)
 dropdown_group = me_message.MEMessageGroup(me_message.MessageType.PERSONAL_ROLE_MESSAGE, [DropdownMessage()])
 
 
