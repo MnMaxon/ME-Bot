@@ -29,7 +29,7 @@ class DiscordRequestor(Requestor):
         return str(self.bot_id), self.oauth_secret
 
     # Gets account information about user
-    def get_oauth_info(self, token_dict: dict[str, str]):
+    def get_user_info(self, token_dict: dict[str, str]):
         headers = {
             "Authorization": f"{token_dict['token_type']} {token_dict['access_token']}"
         }

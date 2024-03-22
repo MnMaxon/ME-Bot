@@ -3,7 +3,7 @@ import dataclasses
 import logging
 
 import requests
-from fastapi import FastAPI, Response
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import RedirectResponse
 
@@ -104,45 +104,15 @@ async def startup_event():  # this function will run before the main API starts
 
 @app.get("/oauth/callback")
 def callback(code=None, state=None):
-    # session = requests.Session()
-    # session.auth = app.discord_requestor.get_auth_tuple()
     token_dict = app.discord_requestor.exchange_code(code=code)
-    # session.headers.update({'Authorization': f"{token_dict['token_type']} {token_dict['access_token']}"})
-    # TODO Add user to user_sessions and redirect them to the home
 
-    user_auth = app.discord_requestor.get_oauth_info(token_dict)
+    # user_auth = app.discord_requestor.get_user_info(token_dict)
     app.user_sessions[state] = session_info.SessionInfo(code, token_dict)
     return RedirectResponse(url=app.config.website_url)
-    # response = PlainTextResponse('Hello, world!')
-    return user_auth
-
-    return "SUCCESS"
-
-    # return uri, state
-
-
-@app.post("/create_session/{name}")
-async def create_session(response: Response, name: str = None):
-    # _logger.info(f"Creating session for {name}!!!!!!!!!!")
-    # if name is None or len(name) == 0:
-    #     name = get_random_session_id()
-    #
-    # session = uuid4()
-    # data = SessionData(username=name)
-    #
-    # await backend.create(session, data)
-    # cookie.attach_to_response(response, session)
-    # _logger.info(f"created session for {name}")
-    #
-    # return f"created session for {name}"
-    pass
 
 
 @app.get("/logged-in/")
 async def logged_in(session_id: str):
-    # _logger.info("LOGGED IN!!!!!!!!")
-    # async for guild in client.fetch_guilds(limit=150):
-    #     _logger.info(guild.name)
     session_id = str(session_id)
     status = len(session_id) == 16 and session_id in app.user_sessions
     return status
@@ -151,13 +121,12 @@ async def logged_in(session_id: str):
 @app.get("/whoami/")
 async def whoami(session_id=None):
     session = requests.session()
-    print("COOKIES", session.cookies)
-    if "session_id" in session.cookies:
-        print(session.cookies["session_id"])
+    # print("COOKIES", session.cookies)
+    # if "session_id" in session.cookies:
+    #     print(session.cookies["session_id"])
     session.cookies["session_id"] = 123
-    print("->", session.cookies["session_id"])
-    print("-> COOKIES", session.cookies)
-    # if session_id is None and 'session_id' in session:
+    # print("->", session.cookies["session_id"])
+    # print("-> COOKIES", session.cookies)
 
     if session_id is None or session_id not in app.user_sessions:
         info = session_info.get_session_info()
