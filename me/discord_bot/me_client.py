@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import os
 from typing import Optional, List
@@ -14,11 +16,11 @@ _logger = logging.getLogger(__name__)
 class PermissionGroup(app_commands.Group):
     @app_commands.command()
     async def add(self, interaction: discord.Interaction):
-        await interaction.response.send_message(f"ping")
+        await interaction.response.send_message("ping")
 
     @app_commands.command()
     async def list(self, interaction: discord.Interaction):
-        await interaction.response.send_message(f"pong")
+        await interaction.response.send_message("pong")
 
 
 class MEClient(discord.Client):
@@ -46,7 +48,9 @@ class MEClient(discord.Client):
     async def setup_hook(self, guilds: List[int] or None = None):
         if guilds is None:
             guilds = self.get_sync_guilds()
-        _logger.info(f"Setting up command hook for guilds specified in the guilds argument: {guilds}")
+        _logger.info(
+            f"Setting up command hook for guilds specified in the guilds argument: {guilds}"
+        )
         # This copies the global commands over to your guild.
         for guild_id in guilds:
             guild = await self.fetch_guild(guild_id)
@@ -65,7 +69,7 @@ class MEClient(discord.Client):
         if self._sync_guilds is not None:
             guilds = self._sync_guilds
         else:
-            guilds = os.environ.get('ME_RUN_GUILDS', '')
+            guilds = os.environ.get("ME_RUN_GUILDS", "")
         guilds = guilds.replace(";", ",").replace(" ", ",").split(",")
         guilds = [g.strip() for g in guilds]
         guilds = [int(g) for g in guilds if g != ""]
@@ -83,8 +87,8 @@ client: MEClient = MEClient(intents=intents)
 
 @client.event
 async def on_ready():
-    _logger.info(f'Logged in as {client.user} (ID: {client.user.id})')
-    _logger.info('------')
+    _logger.info(f"Logged in as {client.user} (ID: {client.user.id})")
+    _logger.info("------")
 
 
 @client.tree.command()
@@ -92,7 +96,8 @@ async def meme(interaction: discord.Interaction):
     print("GOT MEME COMMAND 3!")
     """Says hello!"""
     await interaction.response.send_message(
-        f'Hi, {",".join([str(member) for member in interaction.user.guild.members])}')
+        f'Hi, {",".join([str(member) for member in interaction.user.guild.members])}'
+    )
 
 
 # @client.group()
@@ -110,20 +115,22 @@ async def meme(interaction: discord.Interaction):
 
 @client.tree.command()
 @app_commands.describe(
-    first_value='The first value you want to add something to',
-    second_value='The value you want to add to the first value',
+    first_value="The first value you want to add something to",
+    second_value="The value you want to add to the first value",
 )
 async def add(interaction: discord.Interaction, first_value: int, second_value: int):
     """Adds two numbers together."""
-    await interaction.response.send_message(f'{first_value} + {second_value} = {first_value + second_value}')
+    await interaction.response.send_message(
+        f"{first_value} + {second_value} = {first_value + second_value}"
+    )
 
 
 # The rename decorator allows us to change the display of the parameter on Discord.
 # In this example, even though we use `text_to_send` in the code, the client will use `text` instead.
 # Note that other decorators will still refer to it as `text_to_send` in the code.
 @client.tree.command()
-@app_commands.rename(text_to_send='text')
-@app_commands.describe(text_to_send='Text to send in the current channel')
+@app_commands.rename(text_to_send="text")
+@app_commands.describe(text_to_send="Text to send in the current channel")
 async def send(interaction: discord.Interaction, text_to_send: str):
     """Sends the text into the current channel."""
     await interaction.response.send_message(text_to_send)
@@ -133,20 +140,26 @@ async def send(interaction: discord.Interaction, text_to_send: str):
 # or you can mark it as Optional from the typing standard library. This example does both.
 @client.tree.command()
 @app_commands.describe(
-    member='The member you want to get the joined date from; defaults to the user who uses the command')
-async def joined(interaction: discord.Interaction, member: Optional[discord.Member] = None):
+    member="The member you want to get the joined date from; defaults to the user who uses the command"
+)
+async def joined(
+    interaction: discord.Interaction, member: Optional[discord.Member] = None
+):
     """Says when a member joined."""
     # If no member is explicitly provided then we use the command user here
     member = member or interaction.user
 
     # The format_dt function formats the date time into a human readable representation in the official client
-    await interaction.response.send_message(f'{member} joined {discord.utils.format_dt(member.joined_at)}')
+    await interaction.response.send_message(
+        f"{member} joined {discord.utils.format_dt(member.joined_at)}"
+    )
 
 
 @client.event
 async def on_test_event(**kwargs):
     # Use like client.dispatch("test_event")   <- With optional other args
     _logger.info(f"Called test event with: {kwargs}")
+
 
 # These Context menu commands look cool
 

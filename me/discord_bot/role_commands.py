@@ -30,8 +30,12 @@ class DropdownMessage(me_message.MEMessage):
         return MessageDropdownView()
 
 
-role_group = me_message.MEMessageGroup(me_message.MessageType.ROLE_MESSAGE, [RoleMessage()], max_messages_per_channel=1)
-dropdown_group = me_message.MEMessageGroup(me_message.MessageType.PERSONAL_ROLE_MESSAGE, [DropdownMessage()])
+role_group = me_message.MEMessageGroup(
+    me_message.MessageType.ROLE_MESSAGE, [RoleMessage()], max_messages_per_channel=1
+)
+dropdown_group = me_message.MEMessageGroup(
+    me_message.MessageType.PERSONAL_ROLE_MESSAGE, [DropdownMessage()]
+)
 
 
 class RoleGroup(app_commands.Group):
@@ -45,30 +49,21 @@ class RoleGroup(app_commands.Group):
 
     @app_commands.command()
     async def message(self, interaction: discord.Interaction):
-        await role_group.display(channel=interaction.channel_id, interaction=interaction)
+        await role_group.display(
+            channel=interaction.channel_id, interaction=interaction
+        )
 
-    @app_commands.command(
-        description="Sample Persistent view from github")
+    @app_commands.command(description="Sample Dynamic view from github")
     @commands.is_owner()
     async def sample(self, interaction: discord.Interaction):
-        """Starts a persistent view."""
-        # In order for a persistent view to be listened to, it needs to be sent to an actual message.
-        # Call this method once just to store it somewhere.
-        # In a more complicated program you might fetch the message_id from a database for use later.
-        # However, this is outside the scope of this simple example.
-        # noinspection PyUnresolvedReferences
-        await interaction.response.send_message("What's your favourite colour?", view=PersistentView())
-
-    @app_commands.command(
-        description="Sample Dynamic view from github")
-    @commands.is_owner()
-    async def sample2(self, interaction: discord.Interaction):
         """Starts a dynamic button."""
 
         view = discord.ui.View(timeout=None)
         view.add_item(DynamicButton(interaction.user.id))
         # noinspection PyUnresolvedReferences
-        await interaction.response.send_message('Here is your very own button!', view=view)
+        await interaction.response.send_message(
+            "Here is your very own button!", view=view
+        )
 
 
 class RoleMessageView(discord.ui.View):
@@ -76,11 +71,19 @@ class RoleMessageView(discord.ui.View):
         super().__init__(timeout=None)
         self.ephemeral = ephemeral
 
-    @discord.ui.button(label='Change Roles', style=discord.ButtonStyle.blurple, custom_id='me_bot:MessageView:dropdown')
-    async def change_roles(self, interaction: discord.Interaction, button: discord.ui.Button):
+    @discord.ui.button(
+        label="Change Roles",
+        style=discord.ButtonStyle.blurple,
+        custom_id="me_bot:MessageView:dropdown",
+    )
+    async def change_roles(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
         # noinspection PyUnresolvedReferences
-        await interaction.response.send_message(f"TODO big decisions starting here {datetime.datetime.now()}",
-                                                view=MessageDropdownView())
+        await interaction.response.send_message(
+            f"TODO big decisions starting here {datetime.datetime.now()}",
+            view=MessageDropdownView(),
+        )
 
     # Select Example (COOL):
     # @discord.ui.select( # the decorator that lets you specify the properties of the select menu
@@ -112,10 +115,16 @@ class MessageDropdownView(discord.ui.View):
         super().__init__(timeout=None)
         self.ephemeral = ephemeral
 
-    @discord.ui.button(label='Blurple', style=discord.ButtonStyle.blurple, custom_id='me_bot:MessageDropdown:todo43134')
+    @discord.ui.button(
+        label="Blurple",
+        style=discord.ButtonStyle.blurple,
+        custom_id="me_bot:MessageDropdown:todo43134",
+    )
     async def green(self, interaction: discord.Interaction, button: discord.ui.Button):
         # noinspection PyUnresolvedReferences
-        await interaction.response.send_message('This is blurple.', ephemeral=self.ephemeral)
+        await interaction.response.send_message(
+            "This is blurple.", ephemeral=self.ephemeral
+        )
 
 
 # More complicated cases might require parsing state out from the custom_id instead.
@@ -128,13 +137,15 @@ class DynamicButton(discord.ui.Button):
     def __init__(self, user_id: int) -> None:
         super().__init__(
             # discord.ui.Button(
-            label='Do Thing',
+            label="Do Thing",
             style=discord.ButtonStyle.blurple,
-            custom_id=f'button:user:{user_id}',
-            emoji='\N{THUMBS UP SIGN}',
+            custom_id=f"button:user:{user_id}",
+            emoji="\N{THUMBS UP SIGN}",
             # )
         )
         self.user_id: int = user_id
 
     async def callback(self, interaction: discord.Interaction) -> None:
-        await interaction.response.send_message(f'This is your very own button! ({self.user_id})', ephemeral=True)
+        await interaction.response.send_message(
+            f"This is your very own button! ({self.user_id})", ephemeral=True
+        )

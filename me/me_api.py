@@ -21,7 +21,9 @@ _logger = logging.getLogger(__name__)
 class MEFastAPI(FastAPI):
     user_sessions = {}
 
-    def __init__(self: FastAPI, cfg=None, discord_requestor: DiscordRequestor = None, **kwargs):
+    def __init__(
+        self: FastAPI, cfg=None, discord_requestor: DiscordRequestor = None, **kwargs
+    ):
         if cfg is None:
             cfg = config.get_config()
         self.config: config.Config = cfg
@@ -33,7 +35,9 @@ class MEFastAPI(FastAPI):
 
         if discord_requestor is None:
             discord_requestor = DiscordRequestor(
-                cfg.me_bot_id, cfg.oauth_secret, cfg.oauth_redirect_uri,
+                cfg.me_bot_id,
+                cfg.oauth_secret,
+                cfg.oauth_redirect_uri,
                 api_endpoint=cfg.discord_api_endpoint,
             )
         self.discord_requestor = discord_requestor
@@ -78,10 +82,12 @@ async def startup_event():  # this function will run before the main API starts
         token = app.config.me_run_token
         # _logger.info(f"Started client, waiting for {startup_wait} seconds for connectivity...")
         _logger.info("Starting client...")
-        client.me_setup(app.db,app.config)
+        client.me_setup(app.db, app.config)
         asyncio.create_task(client.start(token))
         _logger.info("Client started!")
-        await asyncio.sleep(startup_wait)  # optional sleep for established connection with discord
+        await asyncio.sleep(
+            startup_wait
+        )  # optional sleep for established connection with discord
     except KeyboardInterrupt:
         await client.logout()
 
@@ -89,7 +95,7 @@ async def startup_event():  # this function will run before the main API starts
     _logger.info("startup_event complete for ME Bot")
 
 
-@app.get('/oauth/callback')
+@app.get("/oauth/callback")
 def callback(code=None, state=None):
     # session = requests.Session()
     # session.auth = app.discord_requestor.get_auth_tuple()
@@ -99,11 +105,11 @@ def callback(code=None, state=None):
 
     user_auth = app.discord_requestor.get_oauth_info(token_dict)
     app.user_sessions[state] = session_info.SessionInfo(code, token_dict)
-    return RedirectResponse(url='http://localhost:3000/')
+    return RedirectResponse(url="http://localhost:3000/")
     # response = PlainTextResponse('Hello, world!')
     return user_auth
 
-    return 'SUCCESS'
+    return "SUCCESS"
 
     # return uri, state
 
@@ -139,10 +145,10 @@ async def logged_in(session_id: str):
 async def whoami(session_id=None):
     session = requests.session()
     print("COOKIES", session.cookies)
-    if 'session_id' in session.cookies:
-        print(session.cookies['session_id'])
-    session.cookies['session_id'] = 123
-    print('->', session.cookies['session_id'])
+    if "session_id" in session.cookies:
+        print(session.cookies["session_id"])
+    session.cookies["session_id"] = 123
+    print("->", session.cookies["session_id"])
     print("-> COOKIES", session.cookies)
     # if session_id is None and 'session_id' in session:
 
@@ -151,6 +157,6 @@ async def whoami(session_id=None):
     else:
         info = app.user_sessions[session_id]
     ret_dict = dataclasses.asdict(info)
-    ret_dict['logged_in'] = info.is_logged_in()
+    ret_dict["logged_in"] = info.is_logged_in()
     _logger.info(f"LOGGED IN {ret_dict}")
     return ret_dict
