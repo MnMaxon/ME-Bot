@@ -22,7 +22,7 @@ class MEFastAPI(FastAPI):
     user_sessions = {}
 
     def __init__(
-        self: FastAPI, cfg=None, discord_requestor: DiscordRequestor = None, **kwargs
+            self: FastAPI, cfg=None, discord_requestor: DiscordRequestor = None, **kwargs
     ):
         if cfg is None:
             cfg = config.get_config()
@@ -54,6 +54,13 @@ origins = [
     "http://127.0.0.1:*",
     "*",
 ]
+
+try:
+    website_base = app.config.website_url.lstrip("https").lstrip("http").lstrip(":").lstrip("/").split("/")[0]
+    website_base = app.config.website_url.split(website_base, 1)[0] + website_base + "*"
+    origins.append(website_base)
+except Exception as e:
+    print("WARNING: FAILED TO PARSE WEBSITE URL FOR ORIGIN - CODE BAD? ", e)
 
 app.add_middleware(
     CORSMiddleware,
@@ -105,7 +112,7 @@ def callback(code=None, state=None):
 
     user_auth = app.discord_requestor.get_oauth_info(token_dict)
     app.user_sessions[state] = session_info.SessionInfo(code, token_dict)
-    return RedirectResponse(url="http://localhost:3000/")
+    return RedirectResponse(url=app.config.website_url)
     # response = PlainTextResponse('Hello, world!')
     return user_auth
 

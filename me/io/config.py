@@ -9,7 +9,7 @@ class Config:
     oauth_secret: str
     oauth_url: str
     oauth_redirect_uri: str
-    website_url: str
+    website_url: str = "http://localhost:3000/"
 
     # Used for instant updates on startup, not necessary
     me_run_guilds: str = ""
