@@ -5,7 +5,21 @@ from typing import Optional, List
 import discord
 from discord import app_commands
 
+from me.discord_bot.role_commands import RoleGroup
+
 _logger = logging.getLogger(__name__)
+
+
+# TODO Scrap permission idea?  Maybe just use the built in discord permissions?
+class PermissionGroup(app_commands.Group):
+    @app_commands.command()
+    async def add(self, interaction: discord.Interaction):
+        await interaction.response.send_message(f"ping")
+
+    @app_commands.command()
+    async def list(self, interaction: discord.Interaction):
+        await interaction.response.send_message(f"pong")
+
 
 class MEClient(discord.Client):
     _sync_guilds: str | None = None
@@ -19,7 +33,11 @@ class MEClient(discord.Client):
         # to store and work with them.
         # Note: When using commands.Bot instead of discord.Client, the bot will
         # maintain its own tree instead.
+        self.db = None
+        self.config = None
         self.tree = app_commands.CommandTree(self)
+        self.tree.add_command(PermissionGroup())
+        self.tree.add_command(RoleGroup(self))
         _logger.info(self.tree)
 
     # In this basic example, we just synchronize the app commands to one guild.
@@ -53,9 +71,14 @@ class MEClient(discord.Client):
         guilds = [int(g) for g in guilds if g != ""]
         return guilds
 
+    def me_setup(self, db, config):
+        self.db = db
+        self.config = config
+
 
 intents = discord.Intents.default()
-client = MEClient(intents=intents)
+intents.members = True
+client: MEClient = MEClient(intents=intents)
 
 
 @client.event
@@ -65,15 +88,24 @@ async def on_ready():
 
 
 @client.tree.command()
-async def hello(interaction: discord.Interaction):
-    """Says hello!"""
-    await interaction.response.send_message(f'Hi, {interaction.user.mention}')
-
-
-@client.tree.command()
 async def meme(interaction: discord.Interaction):
+    print("GOT MEME COMMAND 3!")
     """Says hello!"""
-    await interaction.response.send_message(f'Hi, {interaction.user.mention}')
+    await interaction.response.send_message(
+        f'Hi, {",".join([str(member) for member in interaction.user.guild.members])}')
+
+
+# @client.group()
+# async def permission(interaction: discord.Interaction):
+#     print("GOT PERM COMMAND!")
+#     """Says hello!"""
+#     await interaction.response.send_message(f'Hi, {client.users}')
+
+
+# @permission.command()
+# async def add(interaction: discord.Interaction, first_value: int, second_value: int):
+#     """Adds two numbers together."""
+#     await interaction.response.send_message(f'{first_value} + {second_value} = {first_value + second_value}')
 
 
 @client.tree.command()

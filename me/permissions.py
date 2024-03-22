@@ -2,37 +2,25 @@ import dataclasses
 from enum import Enum
 from typing import Dict
 
+from me.io.db_util import SQLiteDB
+from permission_types import PermType
 
 @dataclasses.dataclass
 class Permission:
     name: str
     # default = None # TODO Get default from discord roles - eg creating channels/roles
 
-
-PERM_CHANNELS_VIEW = Permission('channels.view')
-PERM_CHANNELS_CREATE = Permission('channels.view')
-PERM_ROLES_VIEW = Permission('roles.view')
-PERM_ROLES_CREATE = Permission('roles.create')
-
-_all_permissions: dict[str, Permission] = {
-    p.name: p for p in [PERM_CHANNELS_VIEW,
-                        PERM_CHANNELS_CREATE,
-                        PERM_ROLES_VIEW,
-                        PERM_ROLES_CREATE, ]
-}
-
-
 @dataclasses.dataclass
 class PermissionManager:
-    def has(self, user_id, server_id, permission: Permission or str) -> bool:
-        permission = self.get_permission(permission)
+    db: SQLiteDB
 
-    def get_all(self, user_id, server_id) -> Dict[str, bool]:
-        return {p: self.has(user_id, server_id, p) for p in _all_permissions.keys()}
+    def has(self, server_id, user_id, permission: Permission) -> bool:
+        df = self.db.get_permission(server_id, user_id, permission.name)
+        return len(df) > 0 and df["permission_value"].iloc[0]
 
-    def get_permission(self, permission: str or Permission):
-        if isinstance(permission, Permission):
-            permission = permission.name
-        if permission not in _all_permissions:
-            raise ValueError(f"Permission {permission} not in {_all_permissions.keys()}")
-        return _all_permissions[permission]
+    def grant(self, server_id, user_id, permission: Permission or str, value: bool):
+        self.db.execute("INSERT INTO permissions (server_id, user_id, permission_id, permission_value) VALUES (?, ?, ?, ?, ?)",
+                             (server_id, user_id, permission.id, value))
+
+    def get_all(self, user_id, server_id) -> Dict[PermType, bool]:
+        return {p: self.has(user_id, server_id, p) for p in PermType}

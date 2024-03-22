@@ -10,8 +10,8 @@ from starlette.responses import RedirectResponse
 from me import session_info
 from me.io import config
 from me.io.db_util import SQLiteDB
-from me.me_client import client
-from me.requestor import DiscordRequestor
+from me.discord_bot.me_client import client
+from me.io.requestor import DiscordRequestor
 
 startup_wait = 4
 
@@ -45,8 +45,6 @@ REDIRECT_URI = app.config.oauth_redirect_uri
 API_ENDPOINT = app.config.discord_api_endpoint
 
 origins = [
-    # "http://localhost.tiangolo.com",
-    # "https://localhost.tiangolo.com",
     "http://localhost:3000*",
     "http://localhost:8000*",
     "http://127.0.0.1:*",
@@ -80,6 +78,7 @@ async def startup_event():  # this function will run before the main API starts
         token = app.config.me_run_token
         # _logger.info(f"Started client, waiting for {startup_wait} seconds for connectivity...")
         _logger.info("Starting client...")
+        client.me_setup(app.db,app.config)
         asyncio.create_task(client.start(token))
         _logger.info("Client started!")
         await asyncio.sleep(startup_wait)  # optional sleep for established connection with discord
@@ -128,6 +127,9 @@ async def create_session(response: Response, name: str = None):
 
 @app.get("/logged-in/")
 async def logged_in(session_id: str):
+    # _logger.info("LOGGED IN!!!!!!!!")
+    # async for guild in client.fetch_guilds(limit=150):
+    #     _logger.info(guild.name)
     session_id = str(session_id)
     status = len(session_id) == 16 and session_id in app.user_sessions
     return status
