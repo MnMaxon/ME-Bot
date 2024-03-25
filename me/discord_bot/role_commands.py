@@ -42,6 +42,7 @@ class RoleGroup(app_commands.Group):
     def __init__(self, client: discord.Client):
         super().__init__(name="role", description="Commands for managing roles")
         self.client = client
+        self.message_group = role_group
         role_group.register(self.client)
         dropdown_group.register(self.client)
         # For dynamic items, we must register the classes instead of the views.

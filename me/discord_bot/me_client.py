@@ -7,7 +7,9 @@ from typing import Optional, List
 import discord
 from discord import app_commands
 
-from me.discord_bot.role_commands import RoleGroup
+from me.discord_bot.role_commands import RoleGroup, RoleMessage
+from me.io import db_util
+from me.message_types import MessageType
 
 _logger = logging.getLogger(__name__)
 
@@ -35,11 +37,12 @@ class MEClient(discord.Client):
         # to store and work with them.
         # Note: When using commands.Bot instead of discord.Client, the bot will
         # maintain its own tree instead.
-        self.db = None
+        self.db: db_util.SQLiteDB | None = None
         self.config = None
         self.tree = app_commands.CommandTree(self)
         self.tree.add_command(PermissionGroup())
-        self.tree.add_command(RoleGroup(self))
+        self.role_group: RoleGroup = RoleGroup(self)
+        self.tree.add_command(self.role_group)
         _logger.info(self.tree)
 
     # In this basic example, we just synchronize the app commands to one guild.
@@ -55,11 +58,13 @@ class MEClient(discord.Client):
             guild = await self.fetch_guild(guild_id)
             await self.sync_commands(guild)
 
+        await self.update_messages()
+
     async def sync_commands(self, guild: discord.Guild, log=True):
+        if log:
+            _logger.info(f"Syncing commands with {guild.id}")
         self.tree.copy_global_to(guild=guild)
         await self.tree.sync(guild=guild)
-        if log:
-            _logger.info(f"Synced commands with {guild} ({guild.id})")
 
     # Returns a list of guilds that sync immediately on startup
     def get_sync_guilds(self) -> List[int]:
@@ -77,6 +82,21 @@ class MEClient(discord.Client):
     def me_setup(self, db, config):
         self.db = db
         self.config = config
+
+    async def update_messages(self):
+        _logger.info("Updating Role Messages...")
+        df = self.db.get_messages_of_type_df(MessageType.ROLE_MESSAGE)
+        for channel_id, df_group in df.groupby("channel_id"):
+            await self.update_role_message(channel_id, df_group['message_id'].values)
+
+    async def update_role_message(self, channel_id, message_ids):
+        _logger.info(f"Updating Role Message for channel {channel_id} with message ids {len(message_ids)}: {message_ids}")
+        channel = await self.fetch_channel(channel_id)
+        for message_id in message_ids:
+            message = await channel.fetch_message(message_id)
+            me_role_message: RoleMessage = self.role_group.message_group.get_me_messages()[0]
+            await message.edit(content = me_role_message.get_message(), view=me_role_message.get_view())
+
 
 
 intents = discord.Intents.default()

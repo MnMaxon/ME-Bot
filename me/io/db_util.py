@@ -132,7 +132,7 @@ class SQLiteDB:
 
     def get_messages_of_type_df(self, message_type: MessageType):
         sql = f"{SELECT_MESSAGES_AND_GROUPS} WHERE g.type_id = ?"
-        return self.read_sql(sql, params=(message_type,))
+        return self.read_sql(sql, params=(message_type.value,))
 
     def get_messages_of_type_and_user_df(
         self, message_type: MessageType, user_id: int, server_id: int
