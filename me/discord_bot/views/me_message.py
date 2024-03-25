@@ -1,4 +1,6 @@
-from typing import List
+from __future__ import annotations
+
+from typing import List, Collection
 
 import discord
 import numpy as np
@@ -52,8 +54,23 @@ class MEMessage:
                 "Either interaction or channel and client must be provided"
             )
 
-    async def update(self, message: discord.Message):
-        await message.edit(content=self.get_message(), view=self.get_view())
+    async def update(
+        self,
+        messages: Collection[int | discord.Message] | int | discord.Message,
+        channel: int | None = None,
+    ):
+        if not isinstance(messages, Collection):
+            messages = [messages]
+        if channel is not None and (
+            isinstance(channel, int) or isinstance(channel, str)
+        ):
+            channel = await self._client.fetch_channel(int(channel))
+        for message in messages:
+            if not isinstance(message, discord.Message):
+                if channel is None:
+                    raise ValueError("Channel is required to fetch message by id")
+                message = await channel.fetch_message(int(message))
+            await message.edit(content=self.get_message(), view=self.get_view())
 
     def get_db(self) -> SQLiteDB:
         self.client_check()

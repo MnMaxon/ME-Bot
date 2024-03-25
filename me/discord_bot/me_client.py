@@ -84,19 +84,16 @@ class MEClient(discord.Client):
         self.config = config
 
     async def update_messages(self):
-        _logger.info("Updating Role Messages...")
         df = self.db.get_messages_of_type_df(MessageType.ROLE_MESSAGE)
+        me_role_message: RoleMessage = self.role_group.message_group.get_me_messages()[
+            0
+        ]
         for channel_id, df_group in df.groupby("channel_id"):
-            await self.update_role_message(channel_id, df_group['message_id'].values)
-
-    async def update_role_message(self, channel_id, message_ids):
-        _logger.info(f"Updating Role Message for channel {channel_id} with message ids {len(message_ids)}: {message_ids}")
-        channel = await self.fetch_channel(channel_id)
-        for message_id in message_ids:
-            message = await channel.fetch_message(message_id)
-            me_role_message: RoleMessage = self.role_group.message_group.get_me_messages()[0]
-            await message.edit(content = me_role_message.get_message(), view=me_role_message.get_view())
-
+            message_ids = df_group["message_id"].values
+            _logger.info(
+                f"Updating Role Message for channel {channel_id} with message ids {len(message_ids)}: {message_ids}"
+            )
+            await me_role_message.update(message_ids, channel_id)
 
 
 intents = discord.Intents.default()
@@ -161,7 +158,7 @@ async def send(interaction: discord.Interaction, text_to_send: str):
     member="The member you want to get the joined date from; defaults to the user who uses the command"
 )
 async def joined(
-        interaction: discord.Interaction, member: Optional[discord.Member] = None
+    interaction: discord.Interaction, member: Optional[discord.Member] = None
 ):
     """Says when a member joined."""
     # If no member is explicitly provided then we use the command user here

@@ -22,7 +22,7 @@ class MEFastAPI(FastAPI):
     user_sessions = {}
 
     def __init__(
-            self: FastAPI, cfg=None, discord_requestor: DiscordRequestor = None, **kwargs
+        self: FastAPI, cfg=None, discord_requestor: DiscordRequestor = None, **kwargs
     ):
         if cfg is None:
             cfg = config.get_config()
@@ -56,7 +56,13 @@ origins = [
 ]
 
 try:
-    website_base = app.config.website_url.lstrip("https").lstrip("http").lstrip(":").lstrip("/").split("/")[0]
+    website_base = (
+        app.config.website_url.lstrip("https")
+        .lstrip("http")
+        .lstrip(":")
+        .lstrip("/")
+        .split("/")[0]
+    )
     website_base = app.config.website_url.split(website_base, 1)[0] + website_base + "*"
     origins.append(website_base)
 except Exception as e:
