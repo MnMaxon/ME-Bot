@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Optional, List
+from typing import Optional, List, Union
 
 import discord
-from discord import app_commands
+from discord import app_commands, Thread
+from discord.abc import PrivateChannel, GuildChannel
 
-from me.discord_bot.role_commands import RoleGroup, RoleMessage
+from me.discord_bot.role_commands import RoleCommandGroup, RoleView
+from me.discord_bot.views import me_views
 from me.io import db_util
 from me.message_types import MessageType
 
@@ -41,7 +43,13 @@ class MEClient(discord.Client):
         self.config = None
         self.tree = app_commands.CommandTree(self)
         self.tree.add_command(PermissionGroup())
-        self.role_group: RoleGroup = RoleGroup(self)
+        self.role_message_group = me_views.MEViewGroup(
+            me_views.MessageType.ROLE_MESSAGE,
+            [RoleView(client=self)],
+            max_messages_per_channel=1,
+        )
+        self.role_message_group.register(self)
+        self.role_group: RoleCommandGroup = RoleCommandGroup(self.role_message_group)
         self.tree.add_command(self.role_group)
         _logger.info(self.tree)
 
@@ -85,15 +93,34 @@ class MEClient(discord.Client):
 
     async def update_messages(self):
         df = self.db.get_messages_of_type_df(MessageType.ROLE_MESSAGE)
-        me_role_message: RoleMessage = self.role_group.message_group.get_me_messages()[
-            0
-        ]
+        me_role_message: RoleView = self.role_group.message_group.get_views()[0]
         for channel_id, df_group in df.groupby("channel_id"):
+            channel = await self.fetch_channel(channel_id)
             message_ids = df_group["message_id"].values
             _logger.info(
                 f"Updating Role Message for channel {channel_id} with message ids {len(message_ids)}: {message_ids}"
             )
-            await me_role_message.update(message_ids, channel_id)
+            await me_role_message.update(message_ids, channel)
+
+    # noinspection PyShadowingBuiltins
+    def get_channel(
+        self, id: Optional[Union[GuildChannel, Thread, PrivateChannel, int]], /
+    ) -> Optional[Union[GuildChannel, Thread, PrivateChannel]]:
+        _id = id
+        _logger.debug(f"Getting Channel {_id}")
+        try:
+            _id = super().get_channel(int(_id))
+        except ValueError:
+            pass
+        except TypeError:
+            pass
+        if isinstance(_id, str):
+            _logger.info("to int")
+            _id = int(_id)
+        if isinstance(_id, int):
+            _id = super().get_channel(_id)
+            _logger.debug(f"\tGot Channel, {_id}")
+        return _id
 
 
 intents = discord.Intents.default()
@@ -109,8 +136,7 @@ async def on_ready():
 
 @client.tree.command()
 async def meme(interaction: discord.Interaction):
-    print("GOT MEME COMMAND 3!")
-    """Says hello!"""
+    print("GOT MEME COMMAND!")
     msg = f'Hi, {",".join([str(member) for member in interaction.user.guild.members])}'
     await interaction.response.send_message(msg)
 

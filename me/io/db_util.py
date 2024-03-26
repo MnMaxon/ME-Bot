@@ -165,6 +165,7 @@ class SQLiteDB:
         create_message_types_table_sql = "CREATE TABLE IF NOT EXISTS message_types(type_id INTEGER NOT NULL PRIMARY KEY, type_name TEXT)"
         create_message_groups_table_sql = "CREATE TABLE IF NOT EXISTS message_groups(first_message_id INTEGER NOT NULL, channel_id INTEGER NOT NULL, server_id INTEGER NOT NULL,type_id INTEGER NOT NULL, user_id INTEGER NOT NULL, PRIMARY KEY(first_message_id, channel_id), FOREIGN KEY(server_id) REFERENCES servers, FOREIGN KEY(type_id) REFERENCES message_types)"
         create_messags_table_sql = "CREATE TABLE IF NOT EXISTS messages(message_id INTEGER NOT NULL, first_message_id INTEGER, channel_id INTEGER, FOREIGN KEY(first_message_id, channel_id) REFERENCES message_groups(first_message_id, channel_id), PRIMARY KEY(first_message_id, channel_id))"
+        create_roles_table_sql = "CREATE TABLE IF NOT EXISTS roles(role_id INTEGER NOT NULL, server_id INTEGER NOT NULL, me_role_id INTEGER, channel_id INTEGER, emoji TEXT, FOREIGN KEY(server_id) REFERENCES servers, PRIMARY KEY(role_id, server_id))"
 
         queries = [
             create_permission_types_table_sql,
@@ -176,6 +177,7 @@ class SQLiteDB:
             create_message_types_table_sql,
             create_message_groups_table_sql,
             create_messags_table_sql,
+            create_roles_table_sql,
         ]
         for create_table_sql in queries:
             self.execute(create_table_sql)
@@ -200,3 +202,7 @@ class SQLiteDB:
         channel_id = int(channel_id)
         sql = f"{SELECT_MESSAGES_AND_GROUPS} WHERE g.type_id = ? AND g.channel_id = ?"
         return self.read_sql(sql, params=(type_id, channel_id))
+
+    def get_server_roles_df(self, server_id):
+        sql = "SELECT * FROM roles WHERE server_id = ?"
+        return self.read_sql(sql, params=(server_id,))

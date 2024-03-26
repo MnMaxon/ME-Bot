@@ -1,26 +1,38 @@
 from __future__ import annotations
 
-from typing import List, Collection
+from typing import List, Collection, Optional, Union
 
 import discord
 import numpy as np
+from discord import ButtonStyle, Emoji, PartialEmoji
 
 from me.io.db_util import SQLiteDB
 from me.message_types import MessageType
 
 
-class MEMessage:
+class MEView(discord.ui.View):
     _client: discord.Client = None
 
-    def get_message(self):
+    def __init__(self, client, *args, **kwargs):
+        self._client = client
+        super().__init__(*args, **kwargs)
+
+    def get_message(self, **kwargs):
         raise NotImplementedError("MEMessage is an interface, override get_message()")
 
-    def get_view(self) -> discord.ui.View:
-        raise NotImplementedError("MEMessage is an interface, override get_view()")
+    def get_view(self, **kwargs) -> discord.ui.View:
+        return self
+
+    def get_buttons(self) -> List[discord.ui.Button]:
+        return []
+
+    def add_buttons(self):
+        for button in self.get_buttons():
+            self.add_item(button)
 
     def register(self, client: discord.Client):
         self._client = client
-        client.add_view(self.get_view())
+        client.add_view(self)
 
     def client_check(self):
         if self._client is None:
@@ -32,20 +44,26 @@ class MEMessage:
         channel: int = None,
         interaction: discord.Interaction = None,
         ephemeral=False,
+        client=None,
     ) -> discord.Message:
+        if self._client is None:
+            self._client = client
         self.client_check()
         if channel is None and interaction is not None:
-            channel = interaction.channel_id
+            channel = interaction.channel
+        channel = self._client.get_channel(channel)
 
         if channel is not None and not ephemeral:
-            return await self._client.get_channel(channel).send(
-                self.get_message(), view=self.get_view()
-            )
+            return await channel.send(self.get_message(guild=channel.guild), view=self)
         elif interaction is not None:
-            delete_after = 5 if ephemeral else None
+            delete_after = self.timeout if ephemeral else None
             return await interaction.response.send_message(
-                self.get_message(),
-                view=self.get_view(),
+                self.get_message(
+                    interaction=interaction,
+                    guild=interaction.guild,
+                    user=interaction.user,
+                ),
+                view=self,
                 ephemeral=ephemeral,
                 delete_after=delete_after,
             )
@@ -57,33 +75,30 @@ class MEMessage:
     async def update(
         self,
         messages: Collection[int | discord.Message] | int | discord.Message,
-        channel: int | None = None,
+        channel=None,
     ):
         if not isinstance(messages, Collection):
             messages = [messages]
-        if channel is not None and (
-            isinstance(channel, int) or isinstance(channel, str)
-        ):
-            channel = await self._client.fetch_channel(int(channel))
+        channel = self._client.get_channel(channel)
+        if channel is None:
+            raise ValueError("Channel is required to fetch message by id")
         for message in messages:
             if not isinstance(message, discord.Message):
-                if channel is None:
-                    raise ValueError("Channel is required to fetch message by id")
                 message = await channel.fetch_message(int(message))
-            await message.edit(content=self.get_message(), view=self.get_view())
+            await message.edit(content=self.get_message(guild=channel.guild), view=self)
 
     def get_db(self) -> SQLiteDB:
         self.client_check()
         return self._client.db
 
 
-class MEMessageGroup:
+class MEViewGroup:
     _client = None
 
     def __init__(
         self,
         message_type: MessageType,
-        me_messages: List[MEMessage],
+        views: List[MEView],
         max_messages_per_user=10,
         max_messages_per_server=100,
         max_messages_per_channel=100,
@@ -91,20 +106,20 @@ class MEMessageGroup:
         ephemeral=False,
     ):
         self.max_messages_per_channel = max_messages_per_channel
-        self._me_messages = me_messages
+        self._views = views
         self.message_type = message_type
         self.max_messages_per_user = max_messages_per_user
         self.max_messages_per_server = max_messages_per_server
         self.delete_on_startup = delete_on_startup
         self.ephemeral = ephemeral
 
-    def get_me_messages(self) -> List[MEMessage]:
-        return self._me_messages
+    def get_views(self) -> List[MEView]:
+        return self._views
 
     def register(self, client: discord.Client):
         self._client = client
-        for me_message in self.get_me_messages():
-            me_message.register(client)
+        for view in self.get_views():
+            view.register(client)
         if self.delete_on_startup:
             message_df = self.get_db().get_messages_of_type_df(self.message_type.value)
             message_and_channel_ids = (
@@ -132,7 +147,7 @@ class MEMessageGroup:
     async def delete_oldest(self, message_df):
         oldest_msg = message_df["first_message_id"].min()
         old_df = message_df[message_df["first_message_id"] == oldest_msg]
-        channel = await self._client.fetch_channel(old_df["channel_id"].iloc[0])
+        channel = self._client.get_channel(old_df["channel_id"].iloc[0])
         delete_messages = []
         for msg in old_df["message_id"].values:
             try:
@@ -198,8 +213,8 @@ class MEMessageGroup:
             ephemeral = self.ephemeral
 
         messages = []
-        for me_message in self.get_me_messages():
-            message = await me_message.display(
+        for view in self.get_views():
+            message = await view.display(
                 channel=channel, interaction=interaction, ephemeral=ephemeral
             )
             ephemeral = False  # Only the one message can be ephemeral
@@ -219,7 +234,6 @@ class MEMessageGroup:
             await self.purge_user_messages(user_id, messages[0].guild.id)
             await self.purge_server_messages(messages[0].guild.id)
             await self.purge_channel_messages(messages[0].channel.id)
-
         if interaction is not None and not interaction.response.is_done():
             try:
                 await interaction.response.send_message(
@@ -239,3 +253,47 @@ class MEMessageGroup:
             raise ValueError(
                 "MEMessageGroup must be registered before displaying messages"
             )
+
+    def get_client(self):
+        return self._client
+
+
+class NavButton(discord.ui.Button):
+    def __init__(
+        self,
+        linked_view: Optional[MEView] = None,
+        client: discord.Client = None,
+        add_location: Optional[str] = "below",  # 'below' or 'above' or None
+        custom_id_addon: str = "default",
+        ephemeral: bool = True,
+        style: ButtonStyle = ButtonStyle.secondary,
+        label: Optional[str] = None,
+        disabled: bool = False,
+        custom_id: Optional[str] = None,
+        url: Optional[str] = None,
+        emoji: Optional[Union[str, Emoji, PartialEmoji]] = None,
+        row: Optional[int] = None,
+    ) -> None:
+        self._client = client
+        if custom_id is None:
+            custom_id = f"NavButton:label:{custom_id_addon}:{label}"
+        super().__init__(
+            style=style,
+            label=label,
+            disabled=disabled,
+            custom_id=custom_id,
+            url=url,
+            emoji=emoji,
+            row=row,
+        )
+        self.ephemeral = ephemeral
+        self._linked_view = linked_view
+
+    async def get_linked_view(self, **kwargs):
+        return self._linked_view
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        linked_view = await self.get_linked_view(interaction=interaction)
+        await linked_view.display(
+            client=self._client, interaction=interaction, ephemeral=self.ephemeral
+        )
