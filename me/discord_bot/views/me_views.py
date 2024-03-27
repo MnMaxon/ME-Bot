@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from typing import List, Collection, Optional, Union
+from typing import List, Collection, Optional, Union, Type, Dict
 
 import discord
 import numpy as np
 from discord import ButtonStyle, Emoji, PartialEmoji
+from typing_extensions import deprecated
 
 from me.io.db_util import SQLiteDB
 from me.message_types import MessageType
@@ -13,13 +14,31 @@ from me.message_types import MessageType
 class MEView(discord.ui.View):
     _client: discord.Client = None
 
-    def __init__(self, client, *args, **kwargs):
-        self._client = client
+    def __init__(
+        self, client, interaction=None, previous_context=None, *args, **kwargs
+    ):
         super().__init__(*args, **kwargs)
+        if previous_context is None:
+            previous_context = {}
+        self._client = client
+        self.previous_context = previous_context
+
+    async def get_context(
+        self, interaction: discord.Interaction, clicked_id=None
+    ) -> Dict:
+        context = {}
+        for item in self.children:
+            if isinstance(item, NavButton) or isinstance(item, NavSelect):
+                item_context = await item.get_context(
+                    interaction, clicked_id=clicked_id
+                )
+                context.update(item_context)
+        return context
 
     def get_message(self, **kwargs):
         raise NotImplementedError("MEMessage is an interface, override get_message()")
 
+    @deprecated
     def get_view(self, **kwargs) -> discord.ui.View:
         return self
 
@@ -36,7 +55,9 @@ class MEView(discord.ui.View):
 
     def client_check(self):
         if self._client is None:
-            raise ValueError("MEMessage must be registered before displaying messages")
+            raise ValueError(
+                f"MEMessage must be registered before displaying messages {self.__class__.__name__}"
+            )
 
     # Provide with discord interaction to reply to command
     async def display(
@@ -45,6 +66,7 @@ class MEView(discord.ui.View):
         interaction: discord.Interaction = None,
         ephemeral=False,
         client=None,
+        replace_message=False,
     ) -> discord.Message:
         if self._client is None:
             self._client = client
@@ -57,12 +79,16 @@ class MEView(discord.ui.View):
             return await channel.send(self.get_message(guild=channel.guild), view=self)
         elif interaction is not None:
             delete_after = self.timeout if ephemeral else None
+            msg = self.get_message(
+                interaction=interaction,
+                guild=interaction.guild,
+                user=interaction.user,
+            )
+            if replace_message:
+                await interaction.response.defer()
+                return await interaction.edit_original_response(content=msg, view=self)
             return await interaction.response.send_message(
-                self.get_message(
-                    interaction=interaction,
-                    guild=interaction.guild,
-                    user=interaction.user,
-                ),
+                msg,
                 view=self,
                 ephemeral=ephemeral,
                 delete_after=delete_after,
@@ -90,6 +116,26 @@ class MEView(discord.ui.View):
     def get_db(self) -> SQLiteDB:
         self.client_check()
         return self._client.db
+
+    def add_nav_button(
+        self,
+        label: str,
+        linked_view: Type[MEView] or MEView,
+        replace_message=True,
+        client=None,
+        **kwargs,
+    ):
+        if self._client is None:
+            self._client = client
+        btn = NavButton(
+            label=label,
+            linked_view=linked_view,
+            client=self._client,
+            **kwargs,
+            replace_message=replace_message,
+        )
+        self.add_item(btn)
+        return btn
 
 
 class MEViewGroup:
@@ -261,9 +307,9 @@ class MEViewGroup:
 class NavButton(discord.ui.Button):
     def __init__(
         self,
-        linked_view: Optional[MEView] = None,
+        linked_view: Optional[Type[MEView] or MEView] = None,
+        replace_message: bool = True,
         client: discord.Client = None,
-        add_location: Optional[str] = "below",  # 'below' or 'above' or None
         custom_id_addon: str = "default",
         ephemeral: bool = True,
         style: ButtonStyle = ButtonStyle.secondary,
@@ -276,7 +322,7 @@ class NavButton(discord.ui.Button):
     ) -> None:
         self._client = client
         if custom_id is None:
-            custom_id = f"NavButton:label:{custom_id_addon}:{label}"
+            custom_id = f"me:{self.__class__.__name__}:{custom_id_addon}:{label}"
         super().__init__(
             style=style,
             label=label,
@@ -288,12 +334,130 @@ class NavButton(discord.ui.Button):
         )
         self.ephemeral = ephemeral
         self._linked_view = linked_view
+        self.replace_message = replace_message
 
-    async def get_linked_view(self, **kwargs):
-        return self._linked_view
+    async def get_context(self, interaction: discord.Interaction, clicked_id=None):
+        return {self.label: clicked_id == self.custom_id}
+
+    async def get_linked_view(
+        self, interaction: discord.Interaction = None, **kwargs
+    ) -> MEView:
+        if isinstance(self._linked_view, MEView):
+            return self._linked_view
+
+        context = {}
+        if isinstance(self.view, MEView):
+            context = await self.view.get_context(
+                interaction, clicked_id=self.custom_id
+            )
+        if isinstance(self._linked_view, type):
+            return self._linked_view(
+                client=self._client,
+                interaction=interaction,
+                previous_context=context,
+                **kwargs,
+            )
+        raise TypeError("Linked View must be a MEView or a Type of MEView")
 
     async def callback(self, interaction: discord.Interaction) -> None:
         linked_view = await self.get_linked_view(interaction=interaction)
         await linked_view.display(
-            client=self._client, interaction=interaction, ephemeral=self.ephemeral
+            client=self._client,
+            interaction=interaction,
+            ephemeral=self.ephemeral,
+            replace_message=self.replace_message,
+        )
+
+
+class MESelect(discord.ui.Select):
+    def __init__(
+        self,
+        items: Dict or Collection,
+        client: discord.Client,
+        default_ids: List = None,
+        *args,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        if isinstance(items, Dict):
+            items = items.items()
+        if default_ids is None:
+            default_ids = []
+        else:
+            default_ids = [str(i) for i in default_ids]
+        for item in items:
+            val = item[0]
+            if val is not None:
+                val = str(val)
+            self.add_option(label=str(item[1]), value=val, default=val in default_ids)
+        self._client = client
+
+
+class NavSelect(MESelect):
+    def __init__(
+        self,
+        items: Dict or Collection,
+        client: discord.Client,
+        linked_view: Optional[Type[MEView] or MEView] = None,
+        context: Dict = None,
+        default_ids: List = None,
+        ephemeral: bool = True,
+        replace_message: bool = True,
+        placeholder: Optional[str] = None,
+        custom_id: str = None,
+        custom_id_addon: str = None,
+        *args,
+        **kwargs,
+    ):
+        if context == None:
+            context = {}
+        self.previous_context = context
+        if default_ids is None:
+            default_ids = self.previous_context.get(placeholder, [])
+        self.ephemeral = ephemeral
+        self.replace_message = replace_message
+        self._linked_view = linked_view
+        if custom_id is None:
+            custom_id = f"me:{self.__class__.__name__}:{custom_id_addon}:{placeholder}"
+        self._placeholder = placeholder
+        super().__init__(
+            items=items,
+            client=client,
+            custom_id=custom_id,
+            placeholder=placeholder,
+            default_ids=default_ids,
+            *args,
+            **kwargs,
+        )
+
+    async def get_context(self, interaction: discord.Interaction, clicked_id=None):
+        values = self.values
+        if len(values) == 0:  # No values selected, need to get the previous value(s)
+            values = self.previous_context.get(self._placeholder, [])
+        return {self._placeholder: values}
+
+    async def get_linked_view(
+        self, interaction: discord.Interaction = None, **kwargs
+    ) -> MEView:
+        if isinstance(self._linked_view, MEView):
+            return self._linked_view
+        context = {}
+        if isinstance(self.view, MEView):
+            context = await self.view.get_context(interaction)
+        if isinstance(self._linked_view, type):
+            return self._linked_view(
+                client=self._client,
+                interaction=interaction,
+                previous_context=context,
+                **kwargs,
+            )
+        raise TypeError("Linked View must be a MEView or a Type of MEView")
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        linked_view = await self.get_linked_view(interaction=interaction)
+        await linked_view.display(
+            client=self._client,
+            interaction=interaction,
+            ephemeral=self.ephemeral,
+            replace_message=self.replace_message,
         )
