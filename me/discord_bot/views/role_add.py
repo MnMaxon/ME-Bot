@@ -29,26 +29,19 @@ class MissingRoleView(me_views.MEView):
         self.role_df = role_df
 
     def get_message(self, interaction: discord.Interaction, **kwargs):
-        print_df = self.role_df.copy()
         s = ""
-        print_df["Can Manage"] = print_df["can_manage"].apply(
-            lambda x: "Yes" if x else "No"
-        )
-        print_df["Linked"] = print_df["me_role_id"].apply(
-            lambda x: "Yes" if pd.notna(x) else "No"
-        )
         linked_df = self.role_df[self.role_df["me_role_id"].notna()]
-        unmanageble_df = self.role_df[~self.role_df["can_manage"]]
         if len(linked_df) > 0:
             s += (
                 "Already Linked Roles:\n"
-                + ", ".join(linked_df["role_name"].values)
+                + " - ".join(linked_df["role_name"].values)
                 + "\n\n"
             )
-        if len(unmanageble_df) > 0:
+        manage_false_df = self.role_df[~self.role_df["can_manage"]]
+        if len(manage_false_df) > 0:
             s += (
                 "Role Too Low to Manage:\n"
-                + ", ".join(unmanageble_df["role_name"].values)
+                + " - ".join(manage_false_df["role_name"].values)
                 + "\n\n"
             )
         # s = print_df.to_markdown(
@@ -117,9 +110,15 @@ class CreateExistingRoleButton(me_views.NavButton):
 
 
 class CreateRoleView(me_views.MEView):
-    def __init__(self, **kwargs):
-        super().__init__(timeout=2 * 60, **kwargs)
-        if self.is_existing_role():
+    def __init__(
+        self,
+        persistent_context=("role_df", "New Role", "Existing Discord Role"),
+        **kwargs,
+    ):
+        super().__init__(
+            timeout=2 * 60, persistent_context=persistent_context, **kwargs
+        )
+        if self.previous_context.get("Existing Discord Role", False):
             role_map = {
                 role_id: role_name
                 for role_id, role_name in self.get_manage_df()[
@@ -136,7 +135,7 @@ class CreateRoleView(me_views.MEView):
                         context=self.previous_context,
                     )
                 )
-        elif self.is_new_role():
+        elif self.previous_context.get("New Role", False):
             pass  # TODO
         else:
             self.add_nav_button(
@@ -147,21 +146,14 @@ class CreateRoleView(me_views.MEView):
             self.add_item(CreateExistingRoleButton(client=self._client))
         self.add_nav_button(linked_view=CreateRoleView, label="Refresh", row=4)
 
-    def is_new_role(self):
-        return self.previous_context.get("New Role", False)
-
-    def is_existing_role(self):
-        return self.previous_context.get("Existing Discord Role", False)
-
     async def get_context(
-        self, interaction: discord.Interaction, *args, **kwargs
+        self, interaction: discord.Interaction, clicked_id=None
     ) -> Dict:
-        context = await super().get_context(interaction, *args, **kwargs)
-        context["role_df"] = context.get("role_df", self.get_role_df())
-        context["New Role"] = context.get("New Role", self.is_new_role())
-        context["Existing Discord Role"] = context.get(
-            "Existing Discord Role", self.is_existing_role()
-        )
+        context = await super().get_context(interaction, clicked_id)
+        if self.previous_context.get(
+            "Existing Discord Role", False
+        ):  # Remember if this button is clicked
+            context["Existing Discord Role"] = True
         return context
 
     def get_manage_df(self):

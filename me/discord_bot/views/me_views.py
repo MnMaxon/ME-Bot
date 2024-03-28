@@ -15,18 +15,29 @@ class MEView(discord.ui.View):
     _client: discord.Client = None
 
     def __init__(
-        self, client, interaction=None, previous_context=None, *args, **kwargs
+        self,
+        client,
+        interaction=None,
+        previous_context=None,
+        persistent_context=(),
+        *args,
+        **kwargs,
     ):
         super().__init__(*args, **kwargs)
         if previous_context is None:
             previous_context = {}
         self._client = client
         self.previous_context = previous_context
+        self.persistent_context = persistent_context
 
     async def get_context(
         self, interaction: discord.Interaction, clicked_id=None
     ) -> Dict:
         context = {}
+        if self.persistent_context is not None:
+            for key in self.persistent_context:
+                if key in self.previous_context:
+                    context[key] = self.previous_context[key]
         for item in self.children:
             if isinstance(item, NavButton) or isinstance(item, NavSelect):
                 item_context = await item.get_context(
@@ -34,6 +45,9 @@ class MEView(discord.ui.View):
                 )
                 context.update(item_context)
         return context
+
+    def get_persistent_context(self) -> str:
+        return self.persistent_context
 
     def get_message(self, **kwargs):
         raise NotImplementedError("MEMessage is an interface, override get_message()")
