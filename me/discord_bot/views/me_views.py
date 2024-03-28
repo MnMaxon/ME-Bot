@@ -9,9 +9,10 @@ from typing_extensions import deprecated
 
 from me.io.db_util import SQLiteDB
 from me.message_types import MessageType
+from discord.ui import View, Button, Select
 
 
-class MEView(discord.ui.View):
+class MEView(View):
     _client: discord.Client = None
 
     def __init__(
@@ -53,10 +54,10 @@ class MEView(discord.ui.View):
         raise NotImplementedError("MEMessage is an interface, override get_message()")
 
     @deprecated
-    def get_view(self, **kwargs) -> discord.ui.View:
+    def get_view(self, **kwargs) -> View:
         return self
 
-    def get_buttons(self) -> List[discord.ui.Button]:
+    def get_buttons(self) -> List[Button]:
         return []
 
     def add_buttons(self):
@@ -318,7 +319,7 @@ class MEViewGroup:
         return self._client
 
 
-class NavButton(discord.ui.Button):
+class NavButton(Button):
     def __init__(
         self,
         linked_view: Optional[Type[MEView] or MEView] = None,
@@ -383,7 +384,7 @@ class NavButton(discord.ui.Button):
         )
 
 
-class MESelect(discord.ui.Select):
+class MESelect(Select):
     def __init__(
         self,
         items: Dict or Collection,
@@ -423,7 +424,7 @@ class NavSelect(MESelect):
         *args,
         **kwargs,
     ):
-        if context == None:
+        if context is None:
             context = {}
         self.previous_context = context
         if default_ids is None:
