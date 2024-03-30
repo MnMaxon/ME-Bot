@@ -1,16 +1,15 @@
 from __future__ import annotations
 
 import datetime
-from typing import Sequence
 
 import discord
-from discord import app_commands, Guild, Role
+from discord import app_commands
 
-from me.discord_bot.views import me_views
+from me.discord_bot.views.me_views import MEView, MEViewGroup
 from me.discord_bot.views.role_add import CreateRoleView
 
 
-class MoreView(me_views.MEView):
+class MoreView(MEView):
     def __init__(self, user=None, **kwargs):
         super().__init__(timeout=2 * 60, **kwargs)
         self.add_nav_button(
@@ -23,21 +22,21 @@ class MoreView(me_views.MEView):
         return f"Hello {interaction.user.name}, welcome to the More Screen!"
 
 
-class RoleView(me_views.MEView):
+class RoleView(MEView):
     def __init__(self, ephemeral=False, **kwargs):
         super().__init__(timeout=None, **kwargs)
         self.ephemeral = ephemeral
         self.add_nav_button(
-            linked_view=MoreView(client=self._client),
+            linked_view=MoreView(client=self.get_client()),
             label="More",
             replace_message=False,
         )
 
-    def get_message(self, guild: Guild, **kwargs):
-        roles: Sequence[Role] = guild.roles
-        for role in roles:
-            # TODO get roles from database and add role buttons/viws
-            pass
+    def get_message(self, interaction: discord.Interaction, **kwargs):
+        # roles: Sequence[Role] = guild.roles
+        # for role in roles:
+        # TODO get roles from database and add role buttons/viws
+        # pass
         return f"TODO big decisions starting here {datetime.datetime.now()}"
 
     # @discord.ui.button(
@@ -99,7 +98,7 @@ class RoleView(me_views.MEView):
 
 
 class RoleCommandGroup(app_commands.Group):
-    def __init__(self, role_message_group: me_views.MEViewGroup):
+    def __init__(self, role_message_group: MEViewGroup):
         super().__init__(name="role", description="Commands for managing roles")
         self.client = role_message_group.get_client()
         self.message_group = role_message_group

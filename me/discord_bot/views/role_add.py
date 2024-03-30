@@ -4,8 +4,8 @@ import discord
 import pandas as pd
 from typing_extensions import deprecated
 
-from me.discord_bot.views import me_views
-from me.discord_bot.views.me_views import MESelect, NavSelect
+from me.discord_bot.views import me_views, nav_ui
+from me.discord_bot.views.items import MESelect
 
 
 @deprecated
@@ -17,9 +17,9 @@ class RoleSelect(MESelect):
         self.role_map = role_map
 
     async def callback(self, interaction: discord.Interaction):
+        # noinspection PyUnresolvedReferences
         await interaction.response.send_message(
             f"Awesome! I like {interaction.data['values'][0]} too!",
-            # view=StaticSampleView(),
         )
 
 
@@ -53,30 +53,7 @@ class MissingRoleView(me_views.MEView):
         return s
 
 
-class CreateNewRoleView(me_views.MEView):
-    def __init__(self, **kwargs):
-        super().__init__(timeout=2 * 60, **kwargs)
-        # self.add_item(me_views.NavButton(linked_view=TodoView(client=self._client), label="Add Role"))
-
-    def get_message(self, interaction: discord.Interaction, **kwargs):
-        return "Text Box Here"
-
-    @discord.ui.button(
-        label="Add Role",
-        style=discord.ButtonStyle.blurple,
-        custom_id="me_bot:CreateRoleView:add_role",
-    )
-    async def add_role(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ):
-        # noinspection PyUnresolvedReferences
-        await interaction.response.send_message(
-            "Replace this with a NavButton",
-            view=StaticSampleView(),
-        )
-
-
-class CreateExistingRoleButton(me_views.NavButton):
+class CreateExistingRoleButton(nav_ui.NavButton):
     def __init__(self, **kwargs):
         super().__init__(
             label="Existing Discord Role",
@@ -102,7 +79,7 @@ class CreateExistingRoleButton(me_views.NavButton):
             )
             for role in user.guild.roles
         ]
-        db_df = self._client.db.get_server_roles_df(interaction.guild_id)
+        db_df = self.get_client().db.get_server_roles_df(interaction.guild_id)
         df = pd.DataFrame(all_roles, columns=["role_id", "role_name", "can_manage"])
         df = df.merge(db_df, how="left", on="role_id")
         context["role_df"] = df
@@ -121,29 +98,31 @@ class CreateRoleView(me_views.MEView):
         if self.previous_context.get("Existing Discord Role", False):
             role_map = {
                 role_id: role_name
-                for role_id, role_name in self.get_manage_df()[
-                    ["role_id", "role_name"]
-                ].values
+                for role_id, role_name in self.get_manage_df()
+                .sort_values("role_name")[["role_id", "role_name"]]
+                .values
             }
             if len(role_map) != 0:
                 self.add_item(
-                    NavSelect(
-                        items=role_map,
-                        client=self._client,
+                    nav_ui.NavSelect(
+                        options=role_map,
                         linked_view=CreateRoleView,
                         placeholder="Select Role",
                         context=self.previous_context,
                     )
                 )
         elif self.previous_context.get("New Role", False):
-            pass  # TODO
+            # TODO Text Input cannot be added to views - Needs to be added through the message or something
+            # self.add_item(discord.ui.TextInput(label="New Role Name", row=1))
+            pass
         else:
             self.add_nav_button(
-                linked_view=CreateNewRoleView,
+                linked_view=CreateRoleView,
                 label="New Role",
                 style=discord.ButtonStyle.blurple,
             )
-            self.add_item(CreateExistingRoleButton(client=self._client))
+            self.add_item(CreateExistingRoleButton())
+        self.add_nav_button(linked_view=CreateRoleView, label="Create", row=4)
         self.add_nav_button(linked_view=CreateRoleView, label="Refresh", row=4)
 
     async def get_context(
@@ -156,7 +135,7 @@ class CreateRoleView(me_views.MEView):
             context["Existing Discord Role"] = True
         return context
 
-    def get_manage_df(self):
+    def get_manage_df(self) -> pd.DataFrame:
         df = self.get_role_df()
         df = df[df["can_manage"]]
         df = df[df["me_role_id"].isna()]
