@@ -27,7 +27,7 @@ class RoleView(MEView):
         super().__init__(timeout=None, **kwargs)
         self.ephemeral = ephemeral
         self.add_nav_button(
-            linked_view=MoreView(client=self.get_client()),
+            linked_view=MoreView,
             label="More",
             replace_message=False,
         )

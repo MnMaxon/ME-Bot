@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -27,6 +26,8 @@ class MEView(View):
         The discord client.
     previous_context : dict
         The previous context of the view.
+    previous_view : MEView
+        The previous view.
     persistent_context : Collection[str]
         Keys that will be held consistently when the view is reloaded.
 
@@ -61,6 +62,7 @@ class MEView(View):
         client,
         interaction=None,
         previous_context=None,
+        previous_view=None,
         persistent_context=(),
         *args,
         **kwargs,
@@ -84,6 +86,7 @@ class MEView(View):
             previous_context = {}
         self._client = client
         self.previous_context = previous_context
+        self.previous_view = previous_view
         self.persistent_context = persistent_context
 
     async def get_context(
@@ -132,7 +135,7 @@ class MEView(View):
         """
         return self.persistent_context
 
-    def get_message(self, interaction: discord.Interaction = None, *args, **kwargs):
+    def get_message(self, interaction: discord.Interaction = None, **kwargs):
         """
         Raises NotImplementedError. This method should be overridden in a subclass.
 
@@ -235,17 +238,15 @@ class MEView(View):
         channel = self.get_client().get_channel(channel)
 
         if channel is not None and not ephemeral:
+            kwargs = {"guild": channel.guild}
             return await channel.send(
-                self.get_message(interaction=interaction, guild=channel.guild),
+                self.get_message(interaction=interaction, **kwargs),
                 view=self,
             )
         elif interaction is not None:
             delete_after = self.timeout if ephemeral else None
-            msg = self.get_message(
-                interaction=interaction,
-                guild=interaction.guild,
-                user=interaction.user,
-            )
+            kwargs = {"guild": channel.guild, "user": interaction.user}
+            msg = self.get_message(interaction=interaction, **kwargs)
             if replace_message:
                 await interaction.response.defer()
                 return await interaction.edit_original_response(content=msg, view=self)
@@ -311,6 +312,7 @@ class MEView(View):
         linked_view: Type[MEView] or MEView,
         replace_message=True,
         row: int = None,
+        disabled=False,
         **kwargs,
     ):
         """
@@ -328,6 +330,8 @@ class MEView(View):
                 The discord client (default is None).
             row: int, optional
                 The row of the button (default is None).
+            disabled : bool, optional
+                Whether the button is disabled (default is False).
             **kwargs : dict
                 Arbitrary keyword arguments.
 
@@ -343,10 +347,26 @@ class MEView(View):
             linked_view=linked_view,
             replace_message=replace_message,
             row=row,
+            disabled=disabled,
             **kwargs,
         )
         self.add_item(btn)
         return btn
+
+    def add_back_button(self, ignore_error=False, **kwargs):
+        """
+        Adds a back button to the view.
+
+        Parameters
+        ----------
+            ignore_error : bool, optional
+                Whether to ignore the error if there is no previous view (default is False).
+            **kwargs : dict
+                Arbitrary keyword arguments.
+        """
+        if not ignore_error and self.previous_view is None:
+            raise ValueError("No previous view to go back to")
+        self.add_nav_button(label="Back", linked_view=self.previous_view, **kwargs)
 
     def get_client(self):
         return self._client
