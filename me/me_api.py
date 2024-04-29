@@ -127,12 +127,7 @@ async def logged_in(session_id: str):
 @app.get("/whoami/")
 async def whoami(session_id=None):
     session = requests.session()
-    # print("COOKIES", session.cookies)
-    # if "session_id" in session.cookies:
-    #     print(session.cookies["session_id"])
     session.cookies["session_id"] = 123
-    # print("->", session.cookies["session_id"])
-    # print("-> COOKIES", session.cookies)
 
     if session_id is None or session_id not in app.user_sessions:
         info = session_info.get_session_info()

@@ -36,7 +36,6 @@ def get_config_env_vars():
         var_val = get_env_var(f.name)
         if var_val is not None:
             env_vars[f.name] = var_val
-    # print(env_vars)
     return env_vars
 
 

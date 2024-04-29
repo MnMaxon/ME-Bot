@@ -141,19 +141,6 @@ async def meme(interaction: discord.Interaction):
     await interaction.response.send_message(msg)
 
 
-# @client.group()
-# async def permission(interaction: discord.Interaction):
-#     print("GOT PERM COMMAND!")
-#     """Says hello!"""
-#     await interaction.response.send_message(f'Hi, {client.users}')
-
-
-# @permission.command()
-# async def add(interaction: discord.Interaction, first_value: int, second_value: int):
-#     """Adds two numbers together."""
-#     await interaction.response.send_message(f'{first_value} + {second_value} = {first_value + second_value}')
-
-
 @client.tree.command()
 @app_commands.describe(
     first_value="The first value you want to add something to",

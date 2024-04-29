@@ -70,7 +70,6 @@ class NavModal(items.MEModal):
 
         # Make sure we know what the error actually is
         raise error
-        # traceback.print_exception(type(error), error, error.__traceback__)
 
     async def get_context(self, interaction: discord.Interaction, clicked_id=None):
         return self.get_text_values()
@@ -118,12 +117,8 @@ class ModalButton(NavButton):
                     child.default = self.get_view().previous_context.get(
                         child.label, ""
                     )
-        print("MODAL CHILDREN", self.modal.children)
-        print("ALLOWED TEXT INPUTS", self.allowed_text_inputs)
-        print("DISALLOWED TEXT INPUTS", self.disallowed_text_inputs)
         for child in self.modal.children:
             if isinstance(child, discord.ui.TextInput):
-                print(child.label)
                 if (
                     len(self.allowed_text_inputs) > 0
                     and child.label not in self.allowed_text_inputs
@@ -135,7 +130,6 @@ class ModalButton(NavButton):
                 ):
                     self.modal.remove_item(child)
         # Open the modal instead of the view when clicked
-        print(len(self.modal.children))
         return await interaction.response.send_modal(self.modal)
 
     async def get_context(self, interaction: discord.Interaction, clicked_id=None):
@@ -193,7 +187,6 @@ class NavSelect(items.MESelect):
             context = {self._placeholder: values[0]}
             if self.option_dict is not None:
                 context[self._placeholder + " Desc"] = self.option_dict[int(values[0])]
-                print("CONTEXT A", self.placeholder, self.option_dict[int(values[0])])
         else:
             context = {self._placeholder: values}
         return context

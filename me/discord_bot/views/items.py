@@ -34,7 +34,6 @@ class MESelect(discord.ui.Select):
         super().__init__(custom_id=custom_id, placeholder=placeholder, *args, **kwargs)
         if isinstance(options, Dict):
             self.option_dict = options
-            print(self.option_dict)
             options = options.items()
         if default_ids is None:
             default_ids = []

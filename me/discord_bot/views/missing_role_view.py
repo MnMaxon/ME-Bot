@@ -28,10 +28,4 @@ class MissingRoleView(me_views.MEView):
                 + " - ".join(manage_false_df["role_name"].values)
                 + "\n\n"
             )
-        # s = print_df.to_markdown(
-        #     tablefmt="ascii",
-        #     # headers=["Name", "#", "Price"],
-        #     stralign="right",
-        #     index=False,
-        # )
         return s
