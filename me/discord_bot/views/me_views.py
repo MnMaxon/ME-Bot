@@ -9,7 +9,6 @@ from typing import List, Collection, Type, Dict
 
 import discord
 import numpy as np
-from typing_extensions import deprecated
 
 from me.io.db_util import SQLiteDB
 from me.message_types import MessageType
@@ -24,6 +23,8 @@ class MEView(View):
     ----------
     _client : MEClient
         The discord client.
+    interaction : discord.Interaction
+        The previous interaction.
     previous_context : dict
         The previous context of the view.
     previous_view : MEView
@@ -60,7 +61,7 @@ class MEView(View):
     def __init__(
         self,
         client,
-        interaction=None,
+        interaction: discord.Interaction = None,
         previous_context=None,
         previous_view=None,
         persistent_context=(),
@@ -88,6 +89,7 @@ class MEView(View):
         self.previous_context = previous_context
         self.previous_view = previous_view
         self.persistent_context = persistent_context
+        self.previous_interaction = interaction
 
     async def get_context(
         self, interaction: discord.Interaction, clicked_id=None
@@ -119,7 +121,8 @@ class MEView(View):
                 item_context = await item.get_context(
                     interaction, clicked_id=clicked_id
                 )
-                context.update(item_context)
+                if item_context is not None:
+                    context.update(item_context)
             elif isinstance(item, discord.ui.TextInput):
                 context[item.label] = item.value
         return context
@@ -154,23 +157,6 @@ class MEView(View):
                 If the method is not overridden in a subclass.
         """
         raise NotImplementedError("MEMessage is an interface, override get_message()")
-
-    @deprecated
-    def get_view(self, **kwargs) -> View:
-        """
-        Returns the view.
-
-        Parameters
-        ----------
-            **kwargs : dict
-                Arbitrary keyword arguments.
-
-        Returns
-        -------
-            View
-                The view.
-        """
-        return self
 
     def register(self, client: MEClient):
         """
@@ -233,6 +219,7 @@ class MEView(View):
                 If neither interaction nor channel and client are provided.
         """
         self.client_check()
+        self.previous_interaction = interaction
         if channel is None and interaction is not None:
             channel = interaction.channel
         channel = self.get_client().get_channel(channel)

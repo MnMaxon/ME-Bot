@@ -1,6 +1,7 @@
 from typing import Optional, Union, Type, Dict, Collection, List
 
 import discord
+import pandas as pd
 from discord import ButtonStyle, Emoji, PartialEmoji
 import me.discord_bot.views.me_views as me_views
 import me.discord_bot.views.items as items
@@ -146,7 +147,7 @@ class ModalButton(NavButton):
 class NavSelect(items.MESelect):
     def __init__(
         self,
-        options: Dict or Collection,
+        options: Dict or Collection or pd.DataFrame,
         linked_view: Optional[Type[me_views.MEView] or me_views.MEView] = None,
         context: Dict = None,
         default_ids: List = None,
@@ -169,6 +170,10 @@ class NavSelect(items.MESelect):
         self.replace_message = replace_message
         self.linked_view = linked_view
         self._placeholder = placeholder
+        if isinstance(options, pd.DataFrame):
+            options = {row[0]: row[1] for row in options.values}
+        if isinstance(options, dict):
+            self.option_dict = options
         super().__init__(
             options=options,
             custom_id=custom_id,
@@ -183,10 +188,11 @@ class NavSelect(items.MESelect):
         values = self.values
         if len(values) == 0:  # No values selected, need to get the previous value(s)
             values = self.previous_context.get(self._placeholder, [])
-        if len(values) == 1 and self.max_values == 1:
+        if values is not None and len(values) == 1 and self.max_values == 1:
             context = {self._placeholder: values[0]}
             if self.option_dict is not None:
-                context[self._placeholder + " Desc"] = self.option_dict[int(values[0])]
+                context[self._placeholder + "_desc"] = self.option_dict[int(values[0])]
+                print(self._placeholder + "_desc", context[self._placeholder + "_desc"])
         else:
             context = {self._placeholder: values}
         return context

@@ -5,9 +5,12 @@ import os
 from typing import Optional, List, Union
 
 import discord
-from discord import app_commands, Thread
+import pandas as pd
+from discord import app_commands, Thread, Guild, Member, Role
 from discord.abc import PrivateChannel, GuildChannel
+from pandas import DataFrame
 
+from me import me_util
 from me.discord_bot.role_commands import RoleCommandGroup, RoleView
 from me.discord_bot.views import me_views
 from me.io import db_util
@@ -122,6 +125,63 @@ class MEClient(discord.Client):
             _logger.debug(f"\tGot Channel, {_id}")
         return _id
 
+    # noinspection PyShadowingBuiltins
+    def get_guild(self, id: int or Guild) -> Guild:
+        _id = id
+        if isinstance(_id, Guild):
+            return _id
+        elif isinstance(_id, str):
+            _id = int(_id)
+        return super().get_guild(_id)
+
+    def get_channel_df(
+        self,
+        guild: discord.Guild or int,
+        role_df: bool or DataFrame = False,
+        permissions_for: Member or Role = None,
+        permission_manage_permissions=False,
+    ):
+        guild = self.get_guild(guild)
+        channels = [
+            channel
+            for channel in guild.channels
+            if isinstance(channel, discord.TextChannel)
+        ]
+        channel_dict = {
+            "channel_id": [channel.id for channel in channels],
+            "channel_name": [channel.name for channel in channels],
+            "channel_category_id": [channel.category_id for channel in channels],
+            "channel_category_name": [channel.category.name for channel in channels],
+        }
+        if permissions_for is not None:
+            perms = [channel.permissions_for(permissions_for) for channel in channels]
+            if permission_manage_permissions:
+                channel_dict["manage_permissions"] = [
+                    perm.manage_permissions for perm in perms
+                ]
+        df = DataFrame(channel_dict)
+        if role_df:
+            if isinstance(role_df, bool):
+                role_df = self.db.get_server_roles_df(guild.id)
+            df = pd.merge(
+                df, role_df, on="channel_id", how="left", validate="one_to_many"
+            )
+        return df
+
+    def get_role_df(self, guild_id, user):
+        all_roles = [
+            (
+                role.id,
+                role.name,
+                me_util.can_manage(user, role),
+            )
+            for role in user.guild.roles
+        ]
+        db_df = self.db.get_server_roles_df(guild_id)
+        df = pd.DataFrame(all_roles, columns=["role_id", "role_name", "can_manage"])
+        df = df.merge(db_df, how="left", on="role_id")
+        return df
+
 
 intents = discord.Intents.default()
 intents.members = True
@@ -136,7 +196,6 @@ async def on_ready():
 
 @client.tree.command()
 async def meme(interaction: discord.Interaction):
-    print("GOT MEME COMMAND!")
     msg = f'Hi, {",".join([str(member) for member in interaction.user.guild.members])}'
     await interaction.response.send_message(msg)
 
