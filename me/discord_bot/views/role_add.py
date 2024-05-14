@@ -1,3 +1,5 @@
+import math
+import pprint
 from typing import Dict
 
 import discord
@@ -10,9 +12,16 @@ from me.discord_bot.views.missing_role_view import MissingRoleView
 from me.discord_bot.views.nav_ui import NavSelect
 from me.io.data_filter import FilterManager, IsNullFilter
 
-LABEL_SELECT_ROLE = "Select Role"
-
+EXISTING_DISCORD_ROLE = "Existing Discord Role"
+NEW_CHANNEL_NAME = "New Channel Name"
+LONG_DESCRIPTION = "Long Description"
+SHORT_DESCRIPTION = "Short Description"
+DISCORD_ROLE_NAME = "Discord Role Name"
+SELECT_CHANNEL = "Select Channel"
+SELECT_CHANNEL_DESC = "Select Channel_desc"
+SELECT_ROLE = "Select Role"
 EMOJI_DEFAULT = ":star:"
+EMOJI_OCTAGONAL=':octagonal_sign:'
 
 
 @deprecated
@@ -32,33 +41,33 @@ class RoleSelect(MESelect):
 
 class DescriptionModal(nav_ui.NavModal, title="Optional Descriptions"):
     discord_role_name = discord.ui.TextInput(
-        label="Discord Role Name",
+        label=DISCORD_ROLE_NAME,
         placeholder="New role name here",
         max_length=100,
         required=True,
-    )
-    short_description = discord.ui.TextInput(
-        label="Short Description",
-        placeholder="(Default: role name) Name on button",
-        required=False,
-        max_length=100,
-    )
-    long_description = discord.ui.TextInput(
-        label="Long Description",
-        placeholder="Doesn't really do anything yet",
-        required=False,
-        max_length=400,
     )
     emoji = discord.ui.TextInput(
         label="Emoji",
         placeholder="Paste emoji here, can edit later (:star:)",
         required=False,
     )
+    short_description = discord.ui.TextInput(
+        label=SHORT_DESCRIPTION,
+        placeholder="(Default: role name) Name on button",
+        required=False,
+        max_length=100,
+    )
+    long_description = discord.ui.TextInput(
+        label=LONG_DESCRIPTION,
+        placeholder="Doesn't really do anything yet",
+        required=False,
+        max_length=400,
+    )
 
 
 class NewChannelModal(nav_ui.NavModal, title="New Channel"):
     discord_role_name = discord.ui.TextInput(
-        label="New Channel Name",
+        label=NEW_CHANNEL_NAME,
         placeholder="New role name here",
         max_length=100,
         required=True,
@@ -70,21 +79,21 @@ class NewChannelModal(nav_ui.NavModal, title="New Channel"):
 
 class DescriptionModalButton(nav_ui.ModalButton):
     def __init__(
-            self, allow_name=False, allow_emoji=True, allow_descriptions=True, **kwargs
+        self, allow_name=False, allow_emoji=True, allow_descriptions=True, **kwargs
     ):
         modal = DescriptionModal(self)
         label_list = []
         allow_list = []
         if allow_name:
             label_list.append("Role")
-            allow_list.append("Discord Role Name")
+            allow_list.append(DISCORD_ROLE_NAME)
         if allow_emoji:
             label_list.append("Emoji")
             allow_list.append("Emoji")
         if allow_descriptions:
             label_list.append("Descriptions")
-            allow_list.append("Short Description")
-            allow_list.append("Long Description")
+            allow_list.append(SHORT_DESCRIPTION)
+            allow_list.append(LONG_DESCRIPTION)
         kwargs["label"] = kwargs.get("label", "Edit " + "/".join(label_list))
         kwargs["style"] = kwargs.get("style", discord.ButtonStyle.blurple)
         super().__init__(
@@ -98,16 +107,16 @@ class DescriptionModalButton(nav_ui.ModalButton):
         # Deletes selected role if it exists
         context = await super().get_context(interaction, clicked_id)
         filtered_keys = [k for k, v in context.items() if v is not None and v != ""]
-        if "Discord Role Name" in filtered_keys:
-            self.get_view().previous_context["Existing Discord Role"] = False
-            context[LABEL_SELECT_ROLE] = None
-            context["Existing Discord Role"] = False
+        if DISCORD_ROLE_NAME in filtered_keys:
+            self.get_view().previous_context[EXISTING_DISCORD_ROLE] = False
+            context[SELECT_ROLE] = None
+            context[EXISTING_DISCORD_ROLE] = False
         return context
 
 
 class CreateChannelModalButton(nav_ui.ModalButton):
     def __init__(
-            self, style=discord.ButtonStyle.blurple, label="New Channel", **kwargs
+        self, style=discord.ButtonStyle.blurple, label="New Channel", **kwargs
     ):
         modal = NewChannelModal(self)
         super().__init__(
@@ -122,14 +131,14 @@ class CreateChannelModalButton(nav_ui.ModalButton):
 class SelectChannelButton(nav_ui.NavButton):
     def __init__(self, **kwargs):
         super().__init__(
-            label="Select Channel",
+            label=SELECT_CHANNEL,
             linked_view=CreateRoleView,
             style=discord.ButtonStyle.blurple,
             **kwargs,
         )
 
     async def callback(self, interaction: discord.Interaction):
-        self.get_view().previous_context["New Channel Name"] = ""
+        self.get_view().previous_context[NEW_CHANNEL_NAME] = ""
         await super().callback(interaction)
 
 
@@ -143,7 +152,9 @@ class CancelChannelButton(nav_ui.NavButton):
         )
 
     async def callback(self, interaction: discord.Interaction):
-        self.get_view().previous_context["New Channel Name"] = None
+        self.get_view().previous_context[NEW_CHANNEL_NAME] = None
+        self.get_view().previous_context[SELECT_CHANNEL] = None
+        self.get_view().previous_context[SELECT_CHANNEL_DESC] = None
         await super().callback(interaction)
 
 
@@ -163,45 +174,59 @@ class ChannelSelect(MESelect):
 
 class CreateRoleView(me_views.MEView):
     def __init__(
-            self,
-            persistent_context=(
-                    # "New Role",
-                    "Existing Discord Role",
-                    "Short Description",
-                    "Long Description",
-                    "Discord Role Name",
-                    "Emoji",
-                    LABEL_SELECT_ROLE,
-                    LABEL_SELECT_ROLE + "_desc",
-                    "Select Channel",
-                    "Select Channel_desc",
-                    "New Channel Name",
-                    "channel_filter",
-            ),
-            **kwargs,
+        self,
+        persistent_context=(
+            # "New Role",
+            EXISTING_DISCORD_ROLE,
+            SHORT_DESCRIPTION,
+            LONG_DESCRIPTION,
+            DISCORD_ROLE_NAME,
+            "Emoji",
+            SELECT_ROLE,
+            SELECT_ROLE + "_desc",
+            SELECT_CHANNEL,
+            SELECT_CHANNEL_DESC,
+            NEW_CHANNEL_NAME,
+            "channel_filter",
+        ),
+        **kwargs,
     ):
         super().__init__(
             timeout=2 * 60, persistent_context=persistent_context, **kwargs
         )
+        new_role_name = self.get_new_role_name()
+        if new_role_name is not None and new_role_name in [
+            role.name for role in self.previous_interaction.guild.roles
+        ]:
+            del self.previous_context[DISCORD_ROLE_NAME]
+            msg = f"{EMOJI_OCTAGONAL}  The role '{new_role_name}' already exists, please select a different name"
+            self.previous_context["bonus_msg"] = msg
+        new_channel_name = self.get_new_channel_name()
+        if new_channel_name is not None and new_channel_name in [
+            channel.name for channel in self.previous_interaction.guild.channels
+        ]:
+            del self.previous_context[NEW_CHANNEL_NAME]
+            msg = f"{EMOJI_OCTAGONAL}  The channel '{new_channel_name}' already exists, please select a different name"
+            self.previous_context["bonus_msg"] = msg
         if self.previous_context.get("channel_filter", None) is None:
             self.previous_context["channel_filter"] = FilterManager(
                 filters=[IsNullFilter(col_name="role_id")]
             )
 
-        select_channel = self.previous_context.get("Select Channel", False)
+        select_channel = self.previous_context.get(SELECT_CHANNEL, False)
 
         if select_channel and isinstance(select_channel, bool):
             self.generate_channel_select()
-        elif self.previous_context.get("Existing Discord Role", False):
-            self.previous_context["Discord Role Name"] = ""
+        elif self.previous_context.get(EXISTING_DISCORD_ROLE, False):
+            self.previous_context[DISCORD_ROLE_NAME] = ""
             self.generate_role_select()
         elif self.get_new_role_name() is not None:
             self.add_item(
                 nav_ui.NavButton(
-                    label="Existing Discord Role",
+                    label=EXISTING_DISCORD_ROLE,
                     linked_view=CreateRoleView,
                     style=discord.ButtonStyle.grey,
-                    row=4
+                    row=4,
                 )
             )
             self.add_item(
@@ -218,18 +243,16 @@ class CreateRoleView(me_views.MEView):
                 )
             )
             existing_button = nav_ui.NavButton(
-                label="Existing Discord Role",
+                label=EXISTING_DISCORD_ROLE,
                 linked_view=CreateRoleView,
-                style=discord.ButtonStyle.blurple
+                style=discord.ButtonStyle.blurple,
             )
-            self.add_item(
-                existing_button
-            )
+            self.add_item(existing_button)
 
         # self.add_nav_button(linked_view=CreateRoleView, label="Refresh", row=4)
         # disable until created
         self.add_nav_button(
-            linked_view=CreateRoleView, label="Create", row=4, disabled=True
+            linked_view=CreateRoleView, label="Create", row=4, disabled=self.get_current_role_name() is None
         )
 
     def get_channel_df(self):
@@ -247,7 +270,7 @@ class CreateRoleView(me_views.MEView):
         self.add_item(
             NavSelect(
                 options=channel_df[["channel_id", "channel_name"]],
-                placeholder="Select Channel",
+                placeholder=SELECT_CHANNEL,
                 context=self.previous_context,
                 linked_view=CreateRoleView,
             )
@@ -257,8 +280,8 @@ class CreateRoleView(me_views.MEView):
         if require_role and self.get_current_role_name() is None:
             return
         if (
-                self.get_new_channel_name() is None
-                and self.get_existing_channel_id() is None
+            self.get_new_channel_name() is None
+            and self.get_existing_channel_id() is None
         ):
             self.add_item(CreateChannelModalButton())
             self.add_item(SelectChannelButton())
@@ -272,7 +295,7 @@ class CreateRoleView(me_views.MEView):
                 nav_ui.NavSelect(
                     options=role_map,
                     linked_view=CreateRoleView,
-                    placeholder=LABEL_SELECT_ROLE,
+                    placeholder=SELECT_ROLE,
                     context=self.previous_context,
                 )
             )
@@ -296,10 +319,10 @@ class CreateRoleView(me_views.MEView):
         return val
 
     def get_new_role_name(self):
-        return self.get_context_str("Discord Role Name", None)
+        return self.get_context_str(DISCORD_ROLE_NAME, None)
 
     def get_new_channel_name(self):
-        name = self.get_context_str("New Channel Name", "")
+        name = self.get_context_str(NEW_CHANNEL_NAME, "")
         if name is not None:
             name = name.replace(" ", "-").lower()
             name = re.sub(r"[^a-zA-Z0-9_\-]", "", name)
@@ -313,25 +336,25 @@ class CreateRoleView(me_views.MEView):
         return discord.ButtonStyle.grey
 
     async def get_context(
-            self, interaction: discord.Interaction, clicked_id=None
+        self, interaction: discord.Interaction, clicked_id=None
     ) -> Dict:
         context = await super().get_context(interaction, clicked_id)
         if self.previous_context.get(
-                "Existing Discord Role", False
+            EXISTING_DISCORD_ROLE, False
         ):  # Remember if this button is clicked
-            context["Existing Discord Role"] = True
+            context[EXISTING_DISCORD_ROLE] = True
         return context
 
     def get_current_role_name(self):
         if self.get_new_role_name() is not None:
             return self.get_new_role_name()
         return self.get_context_str(
-            LABEL_SELECT_ROLE + "_desc",
-            self.previous_context.get(LABEL_SELECT_ROLE, None),
+            SELECT_ROLE + "_desc",
+            self.previous_context.get(SELECT_ROLE, None),
         )
 
     def get_short_description(self):
-        return self.get_context_str("Short Description", self.get_current_role_name())
+        return self.get_context_str(SHORT_DESCRIPTION, self.get_current_role_name())
 
     def get_emoji(self):
         if not self.is_emoji_format_ok():
@@ -342,27 +365,11 @@ class CreateRoleView(me_views.MEView):
         emoji = self.get_context_str("Emoji", EMOJI_DEFAULT).strip()
         return emoji.startswith(":") and emoji.endswith(":") and len(emoji) > 2
 
-    def get_message(self, interaction: discord.Interaction, **kwargs):
+    def get_message(self, interaction: discord.Interaction or None = None, **kwargs):
         role_name = self.get_current_role_name()
         if role_name is not None:
-            emoji_warning = ""
-            if not self.is_emoji_format_ok():
-                emoji_warning = f"    (WARNING: Emoji should be in the format :emoji:  not {self.get_context_str('Emoji', 'emoji')})"
-            elif self.get_emoji() == EMOJI_DEFAULT:
-                emoji_warning = "    (WARNING: Default Emoji)"
-            msg = (
-                f"Role:\t\t{role_name}\n"
-                f"Button:\t{self.get_emoji()} {self.get_short_description()}{emoji_warning}\n"
-            )
-            if self.previous_context.get("Long Description", "") != "":
-                msg += f"Long Description: {self.previous_context.get('Long Description', '')}\n"
-            if self.get_new_channel_name() is not None:
-                msg += f"New Channel: {self.get_new_channel_name()}\n"
-            elif self.get_existing_channel_name() is not None:
-                msg += f"Channel: {self.get_existing_channel_name()}\n"
-            # msg += str(self.get_channel_df())
-            return msg
-        elif self.previous_context.get("Existing Discord Role", False):
+            msg = self.get_message_overview()
+        elif self.previous_context.get(EXISTING_DISCORD_ROLE, False):
             if self.get_role_df().empty:
                 msg = "No roles to select from"
             else:
@@ -370,9 +377,42 @@ class CreateRoleView(me_views.MEView):
         else:
             msg = "Create a new Discord Role?"
         bonus_msg = ""
-        if 'bonus_msg' in self.previous_context:
-            bonus_msg = "\n\n" + self.previous_context['bonus_msg']
+        if "bonus_msg" in self.previous_context:
+            bonus_msg = "\n\n" + self.previous_context["bonus_msg"]
         msg += bonus_msg
+        return msg
+
+    def get_message_overview(self):
+        warnings = []
+        info = {}
+        role = self.get_current_role_name()
+        if not self.is_emoji_format_ok():
+            em = self.get_context_str("Emoji", "emoji")
+            warnings.append(f"Emoji should be in the format :emoji: not {em}")
+        if self.get_emoji() == EMOJI_DEFAULT:
+            warnings.append(f"You are using the default emoji ({EMOJI_DEFAULT})")
+        info['Role'] = role
+        info['Button'] = f"{self.get_emoji()} {self.get_short_description()}"
+        desc = self.previous_context.get(LONG_DESCRIPTION, "")
+        if desc != "":
+            info['Desc'] = desc
+        if self.get_new_channel_name() is not None:
+            info['Channel'] = self.get_new_channel_name()
+        elif self.get_existing_channel_name() is not None:
+            info['Channel'] = self.get_existing_channel_name()
+        else:
+            warnings.append(f"No channel selected - {role} will not be linked to any new channels")
+
+        msg = ""
+        tab_len = 4
+        longest = max(len(k) for k in info.keys())
+        base_tabs = math.ceil(longest/tab_len) + 1
+        for k, v in info.items():
+            tabs = "\t" * (base_tabs - math.ceil(len(k)/tab_len))
+            msg += f"**{k}:**{tabs}{v}\n"
+
+        if len(warnings) > 0:
+            msg += "\n:warning:  **WARNINGS**  :warning:\n" + "\n".join(warnings)
         return msg
 
     def get_role_df(self, require_manage=True, require_missing_me_role=True):
@@ -386,9 +426,9 @@ class CreateRoleView(me_views.MEView):
         return df
 
     def get_existing_channel_id(self):
-        channel = self.previous_context.get("Select Channel")
+        channel = self.previous_context.get(SELECT_CHANNEL)
         if channel is not None:
             return int(channel)
 
     def get_existing_channel_name(self):
-        return self.previous_context.get('Select Channel_desc')
+        return self.previous_context.get(SELECT_CHANNEL_DESC)

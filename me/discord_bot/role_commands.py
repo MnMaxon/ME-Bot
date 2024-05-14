@@ -5,21 +5,8 @@ import datetime
 import discord
 from discord import app_commands
 
+from me.discord_bot.views.admin_view import Admin
 from me.discord_bot.views.me_views import MEView, MEViewGroup
-from me.discord_bot.views.role_add import CreateRoleView
-
-
-class MoreView(MEView):
-    def __init__(self, user=None, **kwargs):
-        super().__init__(timeout=2 * 60, **kwargs)
-        self.add_nav_button(
-            linked_view=CreateRoleView,
-            label="Add Role",
-            style=discord.ButtonStyle.blurple,
-        )
-
-    def get_message(self, interaction: discord.Interaction, **kwargs):
-        return f"Hello {interaction.user.name}, welcome to the More Screen!"
 
 
 class RoleView(MEView):
@@ -27,8 +14,8 @@ class RoleView(MEView):
         super().__init__(timeout=None, **kwargs)
         self.ephemeral = ephemeral
         self.add_nav_button(
-            linked_view=MoreView,
-            label="More",
+            linked_view=Admin,
+            label="Admin",
             replace_message=False,
         )
 

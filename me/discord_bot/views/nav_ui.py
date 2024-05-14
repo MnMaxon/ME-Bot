@@ -192,7 +192,6 @@ class NavSelect(items.MESelect):
             context = {self._placeholder: values[0]}
             if self.option_dict is not None:
                 context[self._placeholder + "_desc"] = self.option_dict[int(values[0])]
-                print(self._placeholder + "_desc", context[self._placeholder + "_desc"])
         else:
             context = {self._placeholder: values}
         return context
