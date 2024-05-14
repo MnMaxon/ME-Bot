@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import dataclasses
-from typing import Collection, Any, List
+from typing import Any, List
 
 from pandas import DataFrame
 import pandas as pd
@@ -10,7 +12,7 @@ OPTION_DISABLED = "disabled_option"
 @dataclasses.dataclass
 class FilterOption:
     value: Any
-    label: str = None
+    label: str | None = None
     selected_value: int = 0
     default_value: int = 0
 
@@ -29,8 +31,8 @@ class DisabledOption(FilterOption):
 @dataclasses.dataclass
 class DataFilter:
     options: List[FilterOption] = dataclasses.field(default_factory=list)
-    col_name: str = None
-    label: str = None
+    col_name: str | None = None
+    label: str | None = None
     selected_index = 0
     default_index = 0
 
@@ -82,8 +84,8 @@ class InverseFilter(DataFilter):
         true_label: str = "True",
         disabled_label: str = "None",
         options=None,
-        default_index: bool or int or None = 0,
-        selected_index: bool or int or None or str = "default",
+        default_index: bool | int | None = 0,
+        selected_index: bool | int | None | str = "default",
         allow_disable=True,
         **kwargs,
     ):

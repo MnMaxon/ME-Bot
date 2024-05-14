@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Optional, Union, Type, Dict, Collection, List
 
 import discord
@@ -60,8 +62,6 @@ class NavModal(items.MEModal):
         self.publish_context = True
         await self.modal_button.load_view(interaction)
 
-    # async def on_error(self, interaction: Interaction[ClientT], error: Exception, /) -> None:
-    #     await interaction.response.send_message('An error occurred: {error}', ephemeral=True)
     async def on_error(
         self, interaction: discord.Interaction, error: Exception
     ) -> None:
@@ -112,32 +112,28 @@ class ModalButton(NavButton):
         )
 
     async def callback(self, interaction: discord.Interaction) -> None:
+        await self.set_defaults()
+        for child in self.modal.children:
+            if isinstance(child, discord.ui.TextInput):
+                if child.label not in self.allowed_text_inputs:
+                    self.modal.remove_item(child)
+                if child.label in self.disallowed_text_inputs:
+                    self.modal.remove_item(child)
+        # Open the modal instead of the view when clicked
+        return await interaction.response.send_modal(self.modal)
+
+    # Set the default values of the text inputs to the values from the previous view
+    async def set_defaults(self):
         for child in self.modal.children:
             if isinstance(child, discord.ui.TextInput):
                 if child.default is None or child.default == "":
                     child.default = self.get_view().previous_context.get(
                         child.label, ""
                     )
-        for child in self.modal.children:
-            if isinstance(child, discord.ui.TextInput):
-                if (
-                    len(self.allowed_text_inputs) > 0
-                    and child.label not in self.allowed_text_inputs
-                ):
-                    self.modal.remove_item(child)
-                if (
-                    len(self.disallowed_text_inputs) > 0
-                    and child.label in self.disallowed_text_inputs
-                ):
-                    self.modal.remove_item(child)
-        # Open the modal instead of the view when clicked
-        return await interaction.response.send_modal(self.modal)
 
     async def get_context(self, interaction: discord.Interaction, clicked_id=None):
-        if (
-            not self.modal.publish_context
-        ):  # Protects from publishing '' values before the modal is submitted
-            return {}
+        if not self.modal.publish_context:
+            return {}  # Protects from publishing '' values before the modal is submitted
         return self.modal.get_text_values()
 
     async def load_view(self, interaction: discord.Interaction) -> None:
@@ -147,7 +143,7 @@ class ModalButton(NavButton):
 class NavSelect(items.MESelect):
     def __init__(
         self,
-        options: Dict or Collection or pd.DataFrame,
+        options: Dict | Collection | pd.DataFrame,
         linked_view: Optional[Type[me_views.MEView] or me_views.MEView] = None,
         context: Dict = None,
         default_ids: List = None,

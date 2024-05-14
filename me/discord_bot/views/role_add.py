@@ -1,5 +1,4 @@
 import math
-import pprint
 from typing import Dict
 
 import discord
@@ -21,7 +20,7 @@ SELECT_CHANNEL = "Select Channel"
 SELECT_CHANNEL_DESC = "Select Channel_desc"
 SELECT_ROLE = "Select Role"
 EMOJI_DEFAULT = ":star:"
-EMOJI_OCTAGONAL=':octagonal_sign:'
+EMOJI_OCTAGONAL = ":octagonal_sign:"
 
 
 @deprecated
@@ -252,7 +251,10 @@ class CreateRoleView(me_views.MEView):
         # self.add_nav_button(linked_view=CreateRoleView, label="Refresh", row=4)
         # disable until created
         self.add_nav_button(
-            linked_view=CreateRoleView, label="Create", row=4, disabled=self.get_current_role_name() is None
+            linked_view=CreateRoleView,
+            label="Create",
+            row=4,
+            disabled=self.get_current_role_name() is None,
         )
 
     def get_channel_df(self):
@@ -391,24 +393,26 @@ class CreateRoleView(me_views.MEView):
             warnings.append(f"Emoji should be in the format :emoji: not {em}")
         if self.get_emoji() == EMOJI_DEFAULT:
             warnings.append(f"You are using the default emoji ({EMOJI_DEFAULT})")
-        info['Role'] = role
-        info['Button'] = f"{self.get_emoji()} {self.get_short_description()}"
+        info["Role"] = role
+        info["Button"] = f"{self.get_emoji()} {self.get_short_description()}"
         desc = self.previous_context.get(LONG_DESCRIPTION, "")
         if desc != "":
-            info['Desc'] = desc
+            info["Desc"] = desc
         if self.get_new_channel_name() is not None:
-            info['Channel'] = self.get_new_channel_name()
+            info["Channel"] = self.get_new_channel_name()
         elif self.get_existing_channel_name() is not None:
-            info['Channel'] = self.get_existing_channel_name()
+            info["Channel"] = self.get_existing_channel_name()
         else:
-            warnings.append(f"No channel selected - {role} will not be linked to any new channels")
+            warnings.append(
+                f"No channel selected - {role} will not be linked to any new channels"
+            )
 
         msg = ""
         tab_len = 4
         longest = max(len(k) for k in info.keys())
-        base_tabs = math.ceil(longest/tab_len) + 1
+        base_tabs = math.ceil(longest / tab_len) + 1
         for k, v in info.items():
-            tabs = "\t" * (base_tabs - math.ceil(len(k)/tab_len))
+            tabs = "\t" * (base_tabs - math.ceil(len(k) / tab_len))
             msg += f"**{k}:**{tabs}{v}\n"
 
         if len(warnings) > 0:

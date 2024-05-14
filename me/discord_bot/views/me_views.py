@@ -56,7 +56,7 @@ class MEView(View):
         Adds a navigation button to the view.
     """
 
-    _client: MEClient = None
+    _client: MEClient | None = None
 
     def __init__(
         self,
@@ -203,8 +203,6 @@ class MEView(View):
                 The interaction that triggered the view (default is None).
             ephemeral : bool, optional
                 Whether the view is ephemeral (default is False).
-            client : MEClient, optional
-                The discord client (default is None).
             replace_message : bool, optional
                 Whether to replace the message (default is False).
 
@@ -277,7 +275,7 @@ class MEView(View):
             if not isinstance(message, discord.Message):
                 message = await channel.fetch_message(int(message))
             await message.edit(
-                content=self.get_message(interaction=None, guild=channel.guild),
+                content=self.get_message(interaction=None, **{"guild": channel.guild}),
                 view=self,
             )
 
@@ -581,9 +579,7 @@ class MEViewGroup:
             self.get_db().add_server(interaction.guild_id)
             self.get_db().add_user(user_id)
 
-        if (
-            ephemeral is None
-        ):  # TODO WILL NEED TO USE edit_original_response TO UPDATE EPHEMERAL MESSAGES
+        if ephemeral is None:
             ephemeral = self.ephemeral
 
         messages = []

@@ -146,20 +146,6 @@ class SQLiteDB:
         )
         create_permission_types_table_sql = "CREATE TABLE IF NOT EXISTS permission_types(permission_id INTEGER NOT NULL PRIMARY KEY, permission_name TEXT)"
         create_user_table_sql = "CREATE TABLE IF NOT EXISTS users(user_id INTEGER NOT NULL PRIMARY KEY , active_server INTEGER)"
-        # create_permissions_table_sql = """
-        # CREATE TABLE IF NOT EXISTS permissions (
-        #     server_id        INTEGER not null,
-        #     user_id          INTEGER not null,
-        #     permission_id    INTEGER not null,
-        #     permission_value integer not null,
-        #     permission_cust_name       TEXT,
-        #     primary key (server_id, permission_id, user_id),
-        #     FOREIGN KEY(server_id)  references servers,
-        #     FOREIGN KEY(user_id)    references users,
-        #     FOREIGN KEY(permission_id)    references permission_types
-        # )
-        # """
-        create = ""
         create_server_settings_table_sql = "CREATE TABLE IF NOT EXISTS server_settings(server_id INTEGER NOT NULL, setting TEXT NOT NULL, setting_value TEXT, FOREIGN KEY(server_id) REFERENCES servers(server_id), PRIMARY KEY(server_id, setting))"
         create_user_settings_table_sql = "CREATE TABLE IF NOT EXISTS user_settings(server_id INTEGER NOT NULL, user_id INTEGER NOT NULL, setting TEXT NOT NULL, setting_value TEXT, FOREIGN KEY(server_id) REFERENCES servers(server_id), FOREIGN KEY(user_id) REFERENCES users(user_id), PRIMARY KEY(server_id, user_id, setting))"
         create_message_types_table_sql = "CREATE TABLE IF NOT EXISTS message_types(type_id INTEGER NOT NULL PRIMARY KEY, type_name TEXT)"
