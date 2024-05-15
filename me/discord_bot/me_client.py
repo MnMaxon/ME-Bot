@@ -11,8 +11,8 @@ from discord.abc import PrivateChannel, GuildChannel
 from pandas import DataFrame
 
 from me import me_util
+from me.discord_bot.me_views import me_view
 from me.discord_bot.role_commands import RoleCommandGroup, RoleView
-from me.discord_bot.views import me_views
 from me.io import db_util
 from me.message_types import MessageType
 
@@ -46,8 +46,8 @@ class MEClient(discord.Client):
         self.config = None
         self.tree = app_commands.CommandTree(self)
         self.tree.add_command(PermissionGroup())
-        self.role_message_group = me_views.MEViewGroup(
-            me_views.MessageType.ROLE_MESSAGE,
+        self.role_message_group = me_view.MEViewGroup(
+            me_view.MessageType.ROLE_MESSAGE,
             [RoleView(client=self)],
             max_messages_per_channel=1,
         )
@@ -96,7 +96,7 @@ class MEClient(discord.Client):
 
     async def update_messages(self):
         df = self.db.get_messages_of_type_df(MessageType.ROLE_MESSAGE)
-        me_role_message: RoleView = self.role_group.message_group.get_views()[0]
+        me_role_message: me_view.MEView = self.role_group.message_group.get_views()[0]
         for channel_id, df_group in df.groupby("channel_id"):
             channel = await self.fetch_channel(channel_id)
             message_ids = df_group["message_id"].values
@@ -107,7 +107,7 @@ class MEClient(discord.Client):
 
     # noinspection PyShadowingBuiltins
     def get_channel(
-        self, id: Optional[Union[GuildChannel, Thread, PrivateChannel, int]], /
+        self, id: Optional[Union[GuildChannel, Thread, PrivateChannel, int]]
     ) -> Optional[Union[GuildChannel, Thread, PrivateChannel]]:
         _id = id
         _logger.debug(f"Getting Channel {_id}")

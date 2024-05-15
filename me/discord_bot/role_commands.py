@@ -5,8 +5,8 @@ import datetime
 import discord
 from discord import app_commands
 
+from me.discord_bot.me_views.me_view import MEView, MEViewGroup
 from me.discord_bot.views.admin_view import Admin
-from me.discord_bot.views.me_views import MEView, MEViewGroup
 
 
 class RoleView(MEView):
@@ -19,8 +19,13 @@ class RoleView(MEView):
             replace_message=False,
         )
 
-    def get_message(self, interaction: discord.Interaction, **kwargs):
-        return f"TODO big decisions starting here {datetime.datetime.now()}"
+    def get_message(
+        self, interaction: discord.Interaction | None = None, **kwargs
+    ) -> str:
+        return (
+            f":ballot_box_with_check:  **ME Bot Role Menu**\n"
+            f"Bot restarted at {datetime.datetime.now().strftime('%H:%M:%S')}"
+        )
 
     @discord.ui.button(
         label="Change Roles",

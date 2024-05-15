@@ -1,17 +1,19 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
+
+import numpy as np
+
+from me.message_types import MessageType
 
 if TYPE_CHECKING:
     from me.discord_bot.me_client import MEClient
 
-from typing import List, Collection, Type, Dict
+from typing import Collection, Type, Dict
 
 import discord
-import numpy as np
 
 from me.io.db_util import SQLiteDB
-from me.message_types import MessageType
 from discord.ui import View
 
 
@@ -46,7 +48,8 @@ class MEView(View):
         Registers the view with the discord client.
     client_check():
         Checks if the view is registered with a client.
-    display(channel: int = None, interaction: discord.Interaction = None, ephemeral=False, client=None, replace_message=False) -> discord.Message:
+    display(channel: int = None, interaction: discord.Interaction = None, ephemeral=False, client=None,
+    replace_message=False) -> discord.Message:
         Displays the view.
     update(messages: Collection[int | discord.Message] | int | discord.Message, channel=None):
         Updates the view.
@@ -114,7 +117,7 @@ class MEView(View):
             for key in self.persistent_context:
                 if key in self.previous_context:
                     context[key] = self.previous_context[key]
-        from me.discord_bot.views import nav_ui
+        from me.discord_bot.me_views import nav_ui
 
         for item in self.children:
             if isinstance(item, nav_ui.NavButton) or isinstance(item, nav_ui.NavSelect):
@@ -146,8 +149,6 @@ class MEView(View):
         ----------
             interaction : discord.Interaction
                 The interaction that triggered the view.
-            *args : dict
-                Arbitrary arguments.
             **kwargs : dict
                 Arbitrary keyword arguments.
 
@@ -311,8 +312,6 @@ class MEView(View):
                 The view that the button is linked to.
             replace_message : bool, optional
                 Whether to replace the message (default is True).
-            client : MEClient, optional
-                The discord client (default is None).
             row: int, optional
                 The row of the button (default is None).
             disabled : bool, optional
@@ -325,7 +324,7 @@ class MEView(View):
             nav_ui.NavButton
                 The navigation button that was added.
         """
-        from me.discord_bot.views import nav_ui
+        from me.discord_bot.me_views import nav_ui
 
         btn = nav_ui.NavButton(
             label=label,
@@ -394,7 +393,8 @@ class MEViewGroup:
         Purges the server's messages.
     purge_channel_messages(channel_id: int, max_messages_per_channel: int = None):
         Purges the channel's messages.
-    display(user_id: int = None, channel: int = None, interaction: discord.Interaction = None, ephemeral=None) -> List[discord.Message]:
+    display(user_id: int = None, channel: int = None, interaction: discord.Interaction = None, ephemeral=None)
+     -> List[discord.Message]:
         Displays the group.
     get_db() -> SQLiteDB:
         Returns the database.

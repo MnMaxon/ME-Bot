@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, Dict, Collection, List
-from me.discord_bot.views.me_views import MEView
+from me.discord_bot.me_views.me_view import MEView
 import discord.ui
 
 if TYPE_CHECKING:
@@ -52,12 +52,11 @@ class MESelect(discord.ui.Select):
         return self.get_view().get_client()
 
 
-class MEButton(discord.ui.Button):
-    def get_view(self) -> MEView or None:
-        try:
-            return self.view
-        except AttributeError:
-            return None
+class Item:
+    def __init__(self, context=None):
+        if context is None:
+            context = {}
+        self.previous_context = context
 
-    def get_client(self) -> MEClient:
-        return self.get_view().get_client()
+    async def get_context(self, interaction: discord.Interaction, **kwargs):
+        return {}

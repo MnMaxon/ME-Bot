@@ -42,20 +42,23 @@ def load_config(path: Path):
     return {k: v for k, v in conf.items() if k not in _IGNORE_ON_LOAD_CONFIG_KEYS}
 
 
+def get_folder_path():
+    return me_util.get_data_folder() / "server_id"
+
+
+def get_config_path():
+    folder_path = get_folder_path()
+    folder_path.mkdir(parents=True, exist_ok=True)
+    return folder_path / "server_config.yaml"
+
+
+def get_config() -> ServerConfig:
+    config_path = get_config_path()
+    conf_dict = load_config(config_path)
+    conf_dict["path"] = config_path
+    return ServerConfig(**conf_dict)
+
+
 @dataclasses.dataclass
 class DiscordServer:
     server_id: str
-
-    def get_folder_path(self):
-        return me_util.get_data_folder() / "server_id"
-
-    def get_config_path(self):
-        folder_path = self.get_folder_path()
-        folder_path.mkdir(parents=True, exist_ok=True)
-        return folder_path / "server_config.yaml"
-
-    def get_config(self) -> ServerConfig:
-        config_path = self.get_config_path()
-        conf_dict = load_config(config_path)
-        conf_dict["path"] = config_path
-        return ServerConfig(**conf_dict)

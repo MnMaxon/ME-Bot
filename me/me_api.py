@@ -111,8 +111,6 @@ async def startup_event():  # this function will run before the main API starts
 @app.get("/oauth/callback")
 def callback(code=None, state=None):
     token_dict = app.discord_requestor.exchange_code(code=code)
-
-    # user_auth = app.discord_requestor.get_user_info(token_dict)
     app.user_sessions[state] = session_info.SessionInfo(code, token_dict)
     return RedirectResponse(url=app.config.website_url)
 

@@ -1,8 +1,9 @@
 import discord
-from me.discord_bot.views import me_views
+
+from me.discord_bot.me_views import me_view
 
 
-class MissingRoleView(me_views.MEView):
+class MissingRoleView(me_view.MEView):
     def __init__(self, **kwargs):
         super().__init__(timeout=2 * 60, **kwargs)
         self.add_back_button()

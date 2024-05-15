@@ -1,18 +1,21 @@
 from __future__ import annotations
 
-from typing import Optional, Union, Type, Dict, Collection, List
+from typing import Optional, Union, Type, Dict, Collection, List, TYPE_CHECKING
 
 import discord
 import pandas as pd
 from discord import ButtonStyle, Emoji, PartialEmoji
-import me.discord_bot.views.me_views as me_views
-import me.discord_bot.views.items as items
+from me.discord_bot.me_views import me_view
+import me.discord_bot.me_views.items as items
+
+if TYPE_CHECKING:
+    from me.discord_bot.me_client import MEClient
 
 
-class NavButton(items.MEButton):
+class NavButton(discord.ui.Button, items.Item):
     def __init__(
         self,
-        linked_view: Optional[Type[me_views.MEView] or me_views.MEView] = None,
+        linked_view: Optional[Type[me_view.MEView] or me_view.MEView] = None,
         replace_message: bool = True,
         custom_id_addon: str = "default",
         ephemeral: bool = True,
@@ -23,6 +26,7 @@ class NavButton(items.MEButton):
         url: Optional[str] = None,
         emoji: Optional[Union[str, Emoji, PartialEmoji]] = None,
         row: Optional[int] = None,
+        context: Dict = None,
     ) -> None:
         if custom_id is None:
             custom_id = f"me:{self.__class__.__name__}:{custom_id_addon}:{label}"
@@ -35,16 +39,26 @@ class NavButton(items.MEButton):
             emoji=emoji,
             row=row,
         )
+        items.Item.__init__(self, context=context)
         self.ephemeral = ephemeral
         self.linked_view = linked_view
         self.replace_message = replace_message
+
+    def get_view(self) -> me_view.MEView or None:
+        try:
+            return self.view
+        except AttributeError:
+            return None
+
+    def get_client(self) -> MEClient:
+        return self.get_view().get_client()
 
     async def get_context(self, interaction: discord.Interaction, clicked_id=None):
         return {self.label: clicked_id == self.custom_id}
 
     async def get_linked_view(
         self, interaction: discord.Interaction = None, **kwargs
-    ) -> me_views.MEView:
+    ) -> me_view.MEView:
         return await get_linked_view(self, interaction, **kwargs)
 
     async def callback(self, interaction: discord.Interaction) -> None:
@@ -80,7 +94,7 @@ class ModalButton(NavButton):
     def __init__(
         self,
         modal: NavModal,
-        linked_view: Optional[Type[me_views.MEView] or me_views.MEView] = None,
+        linked_view: Optional[Type[me_view.MEView] or me_view.MEView] = None,
         allowed_text_inputs: Collection[str] = (),
         disallowed_text_inputs: Collection[str] = (),
         replace_message: bool = True,
@@ -144,7 +158,7 @@ class NavSelect(items.MESelect):
     def __init__(
         self,
         options: Dict | Collection | pd.DataFrame,
-        linked_view: Optional[Type[me_views.MEView] or me_views.MEView] = None,
+        linked_view: Optional[Type[me_view.MEView] or me_view.MEView] = None,
         context: Dict = None,
         default_ids: List = None,
         ephemeral: bool = True,
@@ -194,7 +208,7 @@ class NavSelect(items.MESelect):
 
     async def get_linked_view(
         self, interaction: discord.Interaction = None, **kwargs
-    ) -> me_views.MEView:
+    ) -> me_view.MEView:
         return await get_linked_view(self, interaction, **kwargs)
 
     async def callback(self, interaction: discord.Interaction) -> None:
@@ -205,8 +219,8 @@ class NavSelect(items.MESelect):
 # classes multiple inheritance
 async def get_linked_view(
     obj: NavButton or NavSelect, interaction: discord.Interaction = None, **kwargs
-) -> me_views.MEView:
-    if isinstance(obj.linked_view, me_views.MEView):
+) -> me_view.MEView:
+    if isinstance(obj.linked_view, me_view.MEView):
         linked_view = obj.linked_view
         linked_view.previous_view = obj.get_view()
     elif isinstance(obj.linked_view, type):

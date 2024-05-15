@@ -5,10 +5,10 @@ import discord
 from typing_extensions import deprecated
 import re
 
-from me.discord_bot.views import me_views, nav_ui
-from me.discord_bot.views.items import MESelect
+from me.discord_bot.me_views import nav_ui, me_view
+from me.discord_bot.me_views.items import MESelect
 from me.discord_bot.views.missing_role_view import MissingRoleView
-from me.discord_bot.views.nav_ui import NavSelect
+from me.discord_bot.me_views.nav_ui import NavSelect
 from me.io.data_filter import FilterManager, IsNullFilter
 
 EXISTING_DISCORD_ROLE = "Existing Discord Role"
@@ -171,7 +171,7 @@ class ChannelSelect(MESelect):
         )
 
 
-class CreateRoleView(me_views.MEView):
+class CreateRoleView(me_view.MEView):
     def __init__(
         self,
         persistent_context=(
