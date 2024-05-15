@@ -6,7 +6,6 @@ from me.discord_bot.me_views.me_view import MEView
 class RoleCategoryManageView(MEView):
     def __init__(self, **kwargs):
         super().__init__(timeout=2 * 60, **kwargs)
-        self.add_back_button()
         self.add_nav_button(
             linked_view=RoleCategoryManageView,
             label="Add Category",

@@ -1,4 +1,5 @@
 import re
+import sqlite3
 
 import discord
 
@@ -50,6 +51,9 @@ class RoleCategoryAddView(MEView):
                 self.add_category()
                 self.bonus_msg += f"{CHECK}  Created Category: {emoji}{category}\n"
                 self.timeout = 10
+        except sqlite3.IntegrityError as e:
+            self.bonus_msg += f"{CRITICAL}  Category name already exists\n"
+            category = ""
         except ValueError as e:
             self.bonus_msg += f"{CRITICAL}  {e}\n"
             category = ""
@@ -57,7 +61,6 @@ class RoleCategoryAddView(MEView):
         if category == "":
             add_button = RoleCategoryAddButton()
             self.add_item(add_button)
-        self.add_back_button()
 
     def add_category(self):
         category = self.get_category()
@@ -76,7 +79,9 @@ class RoleCategoryAddView(MEView):
 
     def get_category(self):
         cat = self.previous_context.get("Category Name", "")
-        cat = re.sub(r"[^a-zA-Z0-9_\-\ ]", "", cat)
+        cat = re.sub(r"[^a-zA-Z0-9_\- ]", "", cat)
+        if cat == "hidden":
+            raise ValueError("Category name cannot be hidden")
         return cat
 
     def get_emoji(self):
