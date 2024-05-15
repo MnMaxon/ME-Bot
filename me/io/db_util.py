@@ -152,6 +152,7 @@ class SQLiteDB:
         create_message_groups_table_sql = "CREATE TABLE IF NOT EXISTS message_groups(first_message_id INTEGER NOT NULL, channel_id INTEGER NOT NULL, server_id INTEGER NOT NULL,type_id INTEGER NOT NULL, user_id INTEGER NOT NULL, PRIMARY KEY(first_message_id, channel_id), FOREIGN KEY(server_id) REFERENCES servers, FOREIGN KEY(type_id) REFERENCES message_types)"
         create_messags_table_sql = "CREATE TABLE IF NOT EXISTS messages(message_id INTEGER NOT NULL, first_message_id INTEGER, channel_id INTEGER, FOREIGN KEY(first_message_id, channel_id) REFERENCES message_groups(first_message_id, channel_id), PRIMARY KEY(first_message_id, channel_id))"
         create_roles_table_sql = "CREATE TABLE IF NOT EXISTS roles(role_id INTEGER NOT NULL, server_id INTEGER NOT NULL, me_role_id INTEGER, channel_id INTEGER, emoji TEXT, FOREIGN KEY(server_id) REFERENCES servers, PRIMARY KEY(role_id, server_id))"
+        create_role_categories_table_sql = "CREATE TABLE IF NOT EXISTS role_categories(server_id integer constraint role_categories_servers_server_id_fk references servers, category_name integer TEXT not null, role_id integer, emoji TEXT, constraint role_categories_pk primary key (server_id, category_name))"
 
         queries = [
             create_permission_types_table_sql,
@@ -164,6 +165,7 @@ class SQLiteDB:
             create_message_groups_table_sql,
             create_messags_table_sql,
             create_roles_table_sql,
+            create_role_categories_table_sql,
         ]
         for create_table_sql in queries:
             self.execute(create_table_sql)
@@ -192,3 +194,15 @@ class SQLiteDB:
     def get_server_roles_df(self, server_id):
         sql = "SELECT * FROM roles WHERE server_id = ?"
         return self.read_sql(sql, params=(server_id,))
+
+    def get_server_role_categories_df(self, server_id):
+        sql = "SELECT * FROM role_categories WHERE server_id = ?"
+        return self.read_sql(sql, params=(server_id,))
+
+    def add_role_category(self, server_id, category_name, role_id=None):
+        sql = "INSERT INTO role_categories (server_id, category_name, role_id) VALUES (?, ?, ?)"
+        self.execute(sql, params=(server_id, category_name, role_id))
+
+    def delete_role_category(self, server_id, category_name):
+        sql = "DELETE FROM role_categories WHERE server_id = ? AND category_name = ?"
+        self.execute(sql, params=(server_id, category_name))

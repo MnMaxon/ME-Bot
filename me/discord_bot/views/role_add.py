@@ -5,6 +5,7 @@ import discord
 from typing_extensions import deprecated
 import re
 
+from me import me_util
 from me.discord_bot.me_views import nav_ui, me_view
 from me.discord_bot.me_views.items import MESelect
 from me.discord_bot.views.missing_role_view import MissingRoleView
@@ -359,9 +360,9 @@ class CreateRoleView(me_view.MEView):
         return self.get_context_str(SHORT_DESCRIPTION, self.get_current_role_name())
 
     def get_emoji(self):
-        if not self.is_emoji_format_ok():
-            return EMOJI_DEFAULT
-        return self.get_context_str("Emoji", EMOJI_DEFAULT).strip()
+        return me_util.validate_emoji(
+            self.get_context_str("Emoji"), default=EMOJI_DEFAULT, raise_error=False
+        )
 
     def is_emoji_format_ok(self):
         emoji = self.get_context_str("Emoji", EMOJI_DEFAULT).strip()
@@ -388,13 +389,15 @@ class CreateRoleView(me_view.MEView):
         warnings = []
         info = {}
         role = self.get_current_role_name()
-        if not self.is_emoji_format_ok():
-            em = self.get_context_str("Emoji", "emoji")
-            warnings.append(f"Emoji should be in the format :emoji: not {em}")
-        if self.get_emoji() == EMOJI_DEFAULT:
+        emoji = self.get_emoji()
+        try:
+            me_util.validate_emoji(self.get_context_str("Emoji", EMOJI_DEFAULT))
+        except ValueError as e:
+            warnings.append(str(e))
+        if emoji == EMOJI_DEFAULT:
             warnings.append(f"You are using the default emoji ({EMOJI_DEFAULT})")
         info["Role"] = role
-        info["Button"] = f"{self.get_emoji()} {self.get_short_description()}"
+        info["Button"] = f"{emoji} {self.get_short_description()}"
         desc = self.previous_context.get(LONG_DESCRIPTION, "")
         if desc != "":
             info["Desc"] = desc

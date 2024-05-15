@@ -129,7 +129,7 @@ class ModalButton(NavButton):
         await self.set_defaults()
         for child in self.modal.children:
             if isinstance(child, discord.ui.TextInput):
-                if child.label not in self.allowed_text_inputs:
+                if child.label not in self.allowed_text_inputs and self.allowed_text_inputs != ():
                     self.modal.remove_item(child)
                 if child.label in self.disallowed_text_inputs:
                     self.modal.remove_item(child)
